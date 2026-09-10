@@ -415,6 +415,54 @@ function mat(color, opts = {}) {
   return matCache.get(key);
 }
 
+function beamTexture() {
+  const c = document.createElement('canvas'); c.width = 128; c.height = 256;
+  const g = c.getContext('2d');
+  const img = g.createImageData(128, 256);
+  for (let y = 0; y < 256; y++) {
+    for (let x = 0; x < 128; x++) {
+      const dx = (x - 64) / 64;
+      const a = Math.exp(-dx * dx * 4.5) * Math.pow(1 - y / 256, 1.3);
+      const i = (y * 128 + x) * 4;
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = 255;
+      img.data[i + 3] = a * 255;
+    }
+  }
+  g.putImageData(img, 0, 0);
+  return new THREE.CanvasTexture(c);
+}
+function causticTexture(rep) {
+  const S = 128;
+  const c = document.createElement('canvas'); c.width = c.height = S;
+  const g = c.getContext('2d');
+  const img = g.createImageData(S, S);
+  for (let y = 0; y < S; y++) {
+    for (let x = 0; x < S; x++) {
+      const u = x / S * Math.PI * 2, v = y / S * Math.PI * 2;
+      const n = Math.sin(3 * u + 2 * Math.sin(2 * v)) + Math.sin(2 * v + 2 * Math.sin(3 * u)) + Math.sin(2 * (u + v));
+      const a = Math.pow(Math.max(0, n / 3), 6);
+      const i = (y * S + x) * 4;
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = 255;
+      img.data[i + 3] = a * 255;
+    }
+  }
+  g.putImageData(img, 0, 0);
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(rep, rep);
+  return t;
+}
+function hazeTexture() {
+  const c = document.createElement('canvas'); c.width = 4; c.height = 256;
+  const g = c.getContext('2d');
+  const gr = g.createLinearGradient(0, 0, 0, 256);
+  gr.addColorStop(0, 'rgba(255,255,255,.8)');
+  gr.addColorStop(.5, 'rgba(255,255,255,.25)');
+  gr.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 4, 256);
+  return new THREE.CanvasTexture(c);
+}
+
 const LANES = 5, SPACING = 1.4, PLAYER_Y = -2.6, SPAWN_Y = 8, KILL_Y = -7.5;
 const laneX = i => (i - (LANES - 1) / 2) * SPACING;
 
@@ -633,17 +681,30 @@ function spawnObj(type, lane) {
   o.m.position.set(laneX(lane), o.y, 0);
 }
 
-const decor = { seaweed: [], rays: [], bgFish: [] };
-let rayMat;
+const decor = { seaweed: [], rays: [], bgFish: [], caustics: [] };
+const levelMats = [];
 {
-  rayMat = new THREE.MeshBasicMaterial({ color: 0xeafcff, transparent: true, opacity: .16, blending: THREE.AdditiveBlending, depthWrite: false });
-  for (let i = 0; i < 3; i++) {
-    const ray = new THREE.Mesh(new THREE.PlaneGeometry(rand(1.2, 2.2), 26), rayMat);
-    ray.position.set(rand(-3, 3), 6, -7 - i);
-    ray.rotation.z = rand(-.3, -.15);
-    ray.userData = { x0: ray.position.x, phase: rand(0, 6) };
-    scene.add(ray); decor.rays.push(ray);
+  const beamTex = beamTexture();
+  for (let i = 0; i < 4; i++) {
+    const m = new THREE.MeshBasicMaterial({ map: beamTex, transparent: true, opacity: .4, blending: THREE.AdditiveBlending, depthWrite: false, color: 0xeafcff });
+    const ray = new THREE.Mesh(new THREE.PlaneGeometry(rand(1.4, 2.6), 26), m);
+    ray.position.set(rand(-3, 3), 6, -7 - i * .8);
+    ray.rotation.z = rand(-.28, -.1);
+    ray.userData = { x0: ray.position.x, phase: rand(0, 6), rot: ray.rotation.z, op: rand(.28, .45) };
+    scene.add(ray); decor.rays.push(ray); levelMats.push(m);
   }
+  for (const [ry, rz, rep, ro, dx, dy] of [[1, -3, 2, .10, 1, .6], [-2, -5, 3, .07, -.7, 1]]) {
+    const cm = new THREE.MeshBasicMaterial({ map: causticTexture(rep), transparent: true, opacity: ro, blending: THREE.AdditiveBlending, depthWrite: false, color: 0xffffff });
+    cm.userData = { dx, dy };
+    const cp = new THREE.Mesh(new THREE.PlaneGeometry(12, 20), cm);
+    cp.position.set(0, ry, rz);
+    scene.add(cp);
+    levelMats.push(cm); decor.caustics.push(cm);
+  }
+  const hazeMat = new THREE.MeshBasicMaterial({ map: hazeTexture(), transparent: true, opacity: .4, blending: THREE.AdditiveBlending, depthWrite: false, color: 0xffffff });
+  const haze = new THREE.Mesh(new THREE.PlaneGeometry(16, 10), hazeMat);
+  haze.position.set(0, 9, -6);
+  scene.add(haze); levelMats.push(hazeMat);
   for (let i = 0; i < 3; i++) {
     const f = new THREE.Group();
     const b = new THREE.Mesh(new THREE.SphereGeometry(.5, 8, 6), new THREE.MeshBasicMaterial({ color: 0x0d5c8c, transparent: true, opacity: .45 }));
@@ -746,7 +807,7 @@ const LOCATIONS = [
 let locIndex = 0;
 function applyLocation(i) {
   locIndex = i;
-  if (rayMat) rayMat.color.set(LOCATIONS[i].ray);
+  for (const m of levelMats) m.color.set(LOCATIONS[i].ray);
   sun.color.set(LOCATIONS[i].sun);
 }
 
@@ -1386,7 +1447,15 @@ function tick() {
   });
 
   for (const w of decor.seaweed) w.rotation.z = Math.sin(t * 1.3 + w.userData.phase) * .12;
-  for (const r of decor.rays) r.position.x = r.userData.x0 + Math.sin(t * .3 + r.userData.phase) * .6;
+  for (const r of decor.rays) {
+    r.position.x = r.userData.x0 + Math.sin(t * .25 + r.userData.phase) * .5;
+    r.rotation.z = r.userData.rot + Math.sin(t * .4 + r.userData.phase) * .07;
+    r.material.opacity = r.userData.op * (0.7 + 0.3 * Math.sin(t * .55 + r.userData.phase * 2));
+  }
+  for (const cm of decor.caustics) {
+    cm.map.offset.x = t * .012 * cm.userData.dx;
+    cm.map.offset.y = t * .012 * cm.userData.dy;
+  }
   for (const f of decor.bgFish) {
     f.position.x += f.userData.speed * dt;
     if (f.position.x > 9) f.position.x = -9;
