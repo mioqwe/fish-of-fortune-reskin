@@ -656,10 +656,10 @@ const decor = { seaweed: [], rays: [], bgFish: [] };
   }
   for (let i = 0; i < 3; i++) {
     const ray = new THREE.Mesh(
-      new THREE.PlaneGeometry(rand(1.2, 2.2), 18),
+      new THREE.PlaneGeometry(rand(1.2, 2.2), 26),
       new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: .07, blending: THREE.AdditiveBlending, depthWrite: false })
     );
-    ray.position.set(rand(-3, 3), 2, -7 - i);
+    ray.position.set(rand(-3, 3), 6, -7 - i);
     ray.rotation.z = rand(-.3, -.15);
     ray.userData = { x0: ray.position.x, phase: rand(0, 6) };
     scene.add(ray); decor.rays.push(ray);
