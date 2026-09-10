@@ -138,12 +138,8 @@ WORKFLOW / TOOLS
   - Agent task transcript: docs/agent-transcript.txt
 
 HUMAN TIME LOG (human time only, not computer/processing time)
-  - Art direction & DESIGN.md study ............ ~20 min
-  - Icon generator script & icon review ........ ~25 min
-  - Game/HUD implementation guidance & review .. ~45 min
-  - Visual QA iterations (screenshots, fixes) .. ~25 min
-  - Documentation .............................. ~15 min
-  Total human time: ~2 h 10 min
+  Total human time: 1 h 30 min
+
 
 PART 2 — 3D MODELS (GLB)
 ------------------------

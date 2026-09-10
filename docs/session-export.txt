@@ -1,0 +1,1250 @@
+=== PROMPT 1 ===
+start implementing this game. 
+@AGENTS.md @Game.html 
+Called the Read tool with the following input: {"filePath":"/home/mioqwe/desktop/sett/AGENTS.md"}
+<path>/home/mioqwe/desktop/sett/AGENTS.md</path>
+<type>file</type>
+<content>
+1: # AGENTS.md — Fish of Fortune Home Assignment
+2: 
+3: ## Project Overview
+4: 
+5: This project is a two-part home assignment:
+6: 
+7: 1. **Part 1 — HTML Game Reskin:** Reskin a simple HTML game to fit the "Fish of Fortune" aesthetic (colorful, playful fishing/casual-game style). Include custom reskinned backgrounds, sprites, UI components, particle effects, and other visual polish.
+8: 2. **Part 2 — 3D Models (GLB):** Three game-ready, low-poly, optimized GLB models: a Fish (Fish of Fortune style), a Farm House (Klondike Adventure commercial style), and a cute humanoid Character with a Mixamo dance animation.
+9: 
+10: ## Hard Technical Rules
+11: 
+12: - **No build step, no installs.** The game must run by opening `index.html` in a browser from a single folder. No npm, bundlers, or local server requirements.
+13: - **Libraries via CDN only:**
+14:   - **Tailwind CSS** via CDN (`https://cdn.tailwindcss.com`) — used **only** for non-gameplay UI: menus, buttons, HUD, panels, overlays.
+15:   - **Three.js** via CDN (import map / ES modules from unpkg/jsdelivr) — used for **all 3D models, small animations, and effects**.
+16: - **UI vs gameplay split:**
+17:   - Menus, buttons, dialogs, HUD text → plain HTML elements styled with Tailwind classes.
+18:   - Game world, characters, models, particles, animations → Three.js scene.
+19: - **GLB models** are loaded with `GLTFLoader` (Three.js addons via CDN import map); the character GLB must include its Mixamo dance animation clip and play via `AnimationMixer`.
+20: 
+21: ## Project Structure
+22: 
+23: ```
+24: / (game folder)
+25:   index.html          # single entry point
+26:   js/                 # game logic modules (ES modules, no bundler)
+27:   assets/             # images, audio, glb models (all compressed)
+28: glb/
+29:   fish/               # model + textures + prompts.txt
+30:   farm-house/
+31:   character/
+32: README.txt            # workflow, sources, time log
+33: ```
+34: 
+35: ## Coding Conventions
+36: 
+37: - Plain vanilla JS with ES modules (`<script type="module">`); no frameworks, no TypeScript.
+38: - Keep all DOM-based UI markup in `index.html`; style with Tailwind utility classes inline (no custom CSS unless unavoidable).
+39: - Three.js: one scene/renderer setup; dispose geometries/materials/textures properly; target 60fps on modest hardware.
+40: - Keep assets compressed: images as WebP/small PNG, audio compressed, GLBs low-poly with small textures.
+41: - Never hotlink game assets; CDN links only for libraries (Tailwind, Three.js).
+42: 
+43: ## Workflow & Documentation Requirements
+44: 
+45: - Document every step of the process (prompts used, tools used, decisions made).
+46: - Export coding-agent task transcripts/prompts into text files.
+47: - Log **human time only** (not computer/processing time) in the README.
+48: - Deliverables: game folder, source files folder, README with creative/technical approach, asset sources, challenges and resolutions.
+49: 
+50: ## Definition of Done
+51: 
+52: - `index.html` opens locally (double-click / file://) and the game runs with the Fish of Fortune reskin.
+53: - All 3D models render in the Three.js scene; character plays its dance animation.
+54: - All assets compressed; game folder is fully self-contained except the two CDN library imports.
+
+(End of file - total 54 lines)
+</content>
+Called the Read tool with the following input: {"filePath":"/home/mioqwe/desktop/sett/Game.html"}
+<path>/home/mioqwe/desktop/sett/Game.html</path>
+<type>file</type>
+<content>
+1: <!DOCTYPE html>
+2: <html lang="en">
+3: <head>
+4:     <meta charset="UTF-8">
+5:     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+6:     <title>Lane Runner Game</title>
+7:     <style>
+8:         body {
+9:             margin: 0;
+10:             padding: 0;
+11:             display: flex;
+12:             justify-content: center;
+13:             align-items: center;
+14:             height: 100vh;
+15:             background-color: #f0f0f0;
+16:             font-family: Arial, sans-serif;
+17:         }
+18:         
+19:         #game-container {
+20:             position: relative;
+21:         }
+22:         
+23:         canvas {
+24:             border: 2px solid #333;
+25:             background-color: #fff;
+26:         }
+27:         
+28:         #game-stats {
+29:             position: absolute;
+30:             top: 10px;
+31:             left: 10px;
+32:             font-size: 18px;
+33:             font-weight: bold;
+34:         }
+35:         
+36:         #game-over, #game-win {
+37:             position: absolute;
+38:             top: 50%;
+39:             left: 50%;
+40:             transform: translate(-50%, -50%);
+41:             background-color: rgba(0, 0, 0, 0.7);
+42:             color: white;
+43:             padding: 20px;
+44:             border-radius: 10px;
+45:             text-align: center;
+46:             display: none;
+47:         }
+48:         
+49:         button {
+50:             margin-top: 10px;
+51:             padding: 8px 16px;
+52:             font-size: 16px;
+53:             cursor: pointer;
+54:         }
+55:     </style>
+56: </head>
+57: <body>
+58:     <div id="game-container">
+59:         <canvas id="gameCanvas" width="400" height="600"></canvas>
+60:         <div id="game-stats">Coins: 0 | Lives: 3</div>
+61:         <div id="game-over">
+62:             Game Over!
+63:             <br>
+64:             <button id="restart-button">Play Again</button>
+65:         </div>
+66:         <div id="game-win">
+67:             You Win!
+68:             <br>
+69:             <button id="play-again-button">Play Again</button>
+70:         </div>
+71:     </div>
+72: 
+73:     <script>
+74:         // Game variables
+75:         const canvas = document.getElementById('gameCanvas');
+76:         const ctx = canvas.getContext('2d');
+77:         const gameStats = document.getElementById('game-stats');
+78:         const gameOverScreen = document.getElementById('game-over');
+79:         const gameWinScreen = document.getElementById('game-win');
+80:         const restartButton = document.getElementById('restart-button');
+81:         const playAgainButton = document.getElementById('play-again-button');
+82:         
+83:         // Game settings
+84:         const laneCount = 5;
+85:         const laneWidth = canvas.width / laneCount;
+86:         const playerSize = 30;
+87:         const objectSize = 20;
+88:         const playerY = canvas.height - playerSize - 10;
+89:         let playerLane = Math.floor(laneCount / 2);
+90:         let coins = 0;
+91:         let lives = 3;
+92:         let gameRunning = true;
+93:         
+94:         // Arrays to store game objects
+95:         let fallingObjects = [];
+96:         
+97:         // Object types
+98:         const OBJECT_TYPES = {
+99:             COIN: { value: 1, color: 'yellow', shape: 'circle' },
+100:             GEM: { value: 10, color: 'purple', shape: 'diamond' },
+101:             OBSTACLE: { value: 0, color: 'red', shape: 'x' }
+102:         };
+103:         
+104:         // Initialize the game
+105:         function init() {
+106:             coins = 0;
+107:             lives = 3;
+108:             fallingObjects = [];
+109:             playerLane = Math.floor(laneCount / 2);
+110:             gameRunning = true;
+111:             gameOverScreen.style.display = 'none';
+112:             gameWinScreen.style.display = 'none';
+113:             updateStats();
+114:         }
+115:         
+116:         // Move player left or right
+117:         function movePlayer(direction) {
+118:             if (!gameRunning) return;
+119:             
+120:             if (direction === 'left' && playerLane > 0) {
+121:                 playerLane--;
+122:             } else if (direction === 'right' && playerLane < laneCount - 1) {
+123:                 playerLane++;
+124:             }
+125:         }
+126:         
+127:         // Add a new falling object
+128:         function addFallingObject() {
+129:             if (!gameRunning) return;
+130:             
+131:             const lane = Math.floor(Math.random() * laneCount);
+132:             
+133:             // Use weighted probabilities to make gems rare
+134:             const rand = Math.random();
+135:             let type;
+136:             
+137:             if (rand < 0.15) {
+138:                 // 15% chance for gems (rare)
+139:                 type = OBJECT_TYPES.GEM;
+140:             } else if (rand < 0.60) {
+141:                 // 45% chance for coins
+142:                 type = OBJECT_TYPES.COIN;
+143:             } else {
+144:                 // 40% chance for obstacles
+145:                 type = OBJECT_TYPES.OBSTACLE;
+146:             }
+147:             
+148:             fallingObjects.push({
+149:                 lane: lane,
+150:                 y: -objectSize,
+151:                 type: type,
+152:                 speed: 2 + Math.random() * 2  // Random speed between 2 and 4
+153:             });
+154:         }
+155:         
+156:         // Update all game objects
+157:         function update() {
+158:             if (!gameRunning) return;
+159:             
+160:             // Update falling objects
+161:             for (let i = fallingObjects.length - 1; i >= 0; i--) {
+162:                 const obj = fallingObjects[i];
+163:                 obj.y += obj.speed;
+164:                 
+165:                 // Check if object is out of bounds
+166:                 if (obj.y > canvas.height) {
+167:                     fallingObjects.splice(i, 1);
+168:                     continue;
+169:                 }
+170:                 
+171:                 // Check collision with player
+172:                 const playerX = playerLane * laneWidth + laneWidth / 2;
+173:                 const objX = obj.lane * laneWidth + laneWidth / 2;
+174:                 
+175:                 const distance = Math.sqrt(
+176:                     Math.pow(playerX - objX, 2) + 
+177:                     Math.pow(playerY - obj.y, 2)
+178:                 );
+179:                 
+180:                 if (distance < (playerSize + objectSize) / 2) {
+181:                     // Collision detected
+182:                     if (obj.type === OBJECT_TYPES.OBSTACLE) {
+183:                         lives--;
+184:                         updateStats();
+185:                         if (lives <= 0) {
+186:                             gameOver();
+187:                         }
+188:                     } else {
+189:                         coins += obj.type.value;
+190:                         updateStats();
+191:                         if (coins >= 100) {
+192:                             gameWin();
+193:                         }
+194:                     }
+195:                     fallingObjects.splice(i, 1);
+196:                 }
+197:             }
+198:             
+199:             // Randomly add new objects
+200:             if (Math.random() < 0.02) {  // 2% chance each frame
+201:                 addFallingObject();
+202:             }
+203:         }
+204:         
+205:         // Draw everything on canvas
+206:         function draw() {
+207:             // Clear canvas
+208:             ctx.clearRect(0, 0, canvas.width, canvas.height);
+209:             
+210:             // Draw lanes (faint lines)
+211:             ctx.strokeStyle = '#ddd';
+212:             ctx.lineWidth = 1;
+213:             for (let i = 1; i < laneCount; i++) {
+214:                 const x = i * laneWidth;
+215:                 ctx.beginPath();
+216:                 ctx.moveTo(x, 0);
+217:                 ctx.lineTo(x, canvas.height);
+218:                 ctx.stroke();
+219:             }
+220:             
+221:             // Draw player (blue box)
+222:             ctx.fillStyle = 'blue';
+223:             const playerX = playerLane * laneWidth + (laneWidth - playerSize) / 2;
+224:             ctx.fillRect(playerX, playerY, playerSize, playerSize);
+225:             
+226:             // Draw falling objects
+227:             for (const obj of fallingObjects) {
+228:                 const objX = obj.lane * laneWidth + laneWidth / 2;
+229:                 
+230:                 ctx.fillStyle = obj.type.color;
+231:                 
+232:                 if (obj.type.shape === 'circle') {
+233:                     // Draw coin (yellow circle)
+234:                     ctx.beginPath();
+235:                     ctx.arc(objX, obj.y, objectSize / 2, 0, Math.PI * 2);
+236:                     ctx.fill();
+237:                 } else if (obj.type.shape === 'diamond') {
+238:                     // Draw gem (purple diamond)
+239:                     ctx.beginPath();
+240:                     ctx.moveTo(objX, obj.y - objectSize / 2);
+241:                     ctx.lineTo(objX + objectSize / 2, obj.y);
+242:                     ctx.lineTo(objX, obj.y + objectSize / 2);
+243:                     ctx.lineTo(objX - objectSize / 2, obj.y);
+244:                     ctx.closePath();
+245:                     ctx.fill();
+246:                 } else if (obj.type.shape === 'x') {
+247:                     // Draw obstacle (red X)
+248:                     ctx.lineWidth = 3;
+249:                     ctx.strokeStyle = obj.type.color;
+250:                     const size = objectSize / 2;
+251:                     ctx.beginPath();
+252:                     ctx.moveTo(objX - size, obj.y - size);
+253:                     ctx.lineTo(objX + size, obj.y + size);
+254:                     ctx.moveTo(objX + size, obj.y - size);
+255:                     ctx.lineTo(objX - size, obj.y + size);
+256:                     ctx.stroke();
+257:                 }
+258:             }
+259:         }
+260:         
+261:         // Game loop
+262:         function gameLoop() {
+263:             update();
+264:             draw();
+265:             requestAnimationFrame(gameLoop);
+266:         }
+267:         
+268:         // Update statistics display
+269:         function updateStats() {
+270:             gameStats.innerText = `Coins: ${coins} | Lives: ${lives}`;
+271:         }
+272:         
+273:         // Game over
+274:         function gameOver() {
+275:             gameRunning = false;
+276:             gameOverScreen.style.display = 'block';
+277:         }
+278:         
+279:         // Game win
+280:         function gameWin() {
+281:             gameRunning = false;
+282:             gameWinScreen.style.display = 'block';
+283:         }
+284:         
+285:         // Event listeners
+286:         document.addEventListener('keydown', (e) => {
+287:             // Arrow keys
+288:             if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+289:                 movePlayer('left');
+290:             } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+291:                 movePlayer('right');
+292:             }
+293:         });
+294:         
+295:         restartButton.addEventListener('click', init);
+296:         playAgainButton.addEventListener('click', init);
+297:         
+298:         // Start the game
+299:         init();
+300:         gameLoop();
+301:     </script>
+302: </body>
+303: </html>
+
+(End of file - total 303 lines)
+</content>
+
+=== PROMPT 2 ===
+start implementing this game. 
+@AGENTS.md @Game.html @DESIGN.md 
+Called the Read tool with the following input: {"filePath":"/home/mioqwe/desktop/sett/AGENTS.md"}
+<path>/home/mioqwe/desktop/sett/AGENTS.md</path>
+<type>file</type>
+<content>
+1: # AGENTS.md — Fish of Fortune Home Assignment
+2: 
+3: ## Project Overview
+4: 
+5: This project is a two-part home assignment:
+6: 
+7: 1. **Part 1 — HTML Game Reskin:** Reskin a simple HTML game to fit the "Fish of Fortune" aesthetic (colorful, playful fishing/casual-game style). Include custom reskinned backgrounds, sprites, UI components, particle effects, and other visual polish.
+8: 2. **Part 2 — 3D Models (GLB):** Three game-ready, low-poly, optimized GLB models: a Fish (Fish of Fortune style), a Farm House (Klondike Adventure commercial style), and a cute humanoid Character with a Mixamo dance animation.
+9: 
+10: ## Hard Technical Rules
+11: 
+12: - **No build step, no installs.** The game must run by opening `index.html` in a browser from a single folder. No npm, bundlers, or local server requirements.
+13: - **Libraries via CDN only:**
+14:   - **Tailwind CSS** via CDN (`https://cdn.tailwindcss.com`) — used **only** for non-gameplay UI: menus, buttons, HUD, panels, overlays.
+15:   - **Three.js** via CDN (import map / ES modules from unpkg/jsdelivr) — used for **all 3D models, small animations, and effects**.
+16: - **UI vs gameplay split:**
+17:   - Menus, buttons, dialogs, HUD text → plain HTML elements styled with Tailwind classes.
+18:   - Game world, characters, models, particles, animations → Three.js scene.
+19: - **GLB models** are loaded with `GLTFLoader` (Three.js addons via CDN import map); the character GLB must include its Mixamo dance animation clip and play via `AnimationMixer`.
+20: 
+21: ## Project Structure
+22: 
+23: ```
+24: / (game folder)
+25:   index.html          # single entry point
+26:   js/                 # game logic modules (ES modules, no bundler)
+27:   assets/             # images, audio, glb models (all compressed)
+28: glb/
+29:   fish/               # model + textures + prompts.txt
+30:   farm-house/
+31:   character/
+32: README.txt            # workflow, sources, time log
+33: ```
+34: 
+35: ## Coding Conventions
+36: 
+37: - Plain vanilla JS with ES modules (`<script type="module">`); no frameworks, no TypeScript.
+38: - Keep all DOM-based UI markup in `index.html`; style with Tailwind utility classes inline (no custom CSS unless unavoidable).
+39: - Three.js: one scene/renderer setup; dispose geometries/materials/textures properly; target 60fps on modest hardware.
+40: - Keep assets compressed: images as WebP/small PNG, audio compressed, GLBs low-poly with small textures.
+41: - Never hotlink game assets; CDN links only for libraries (Tailwind, Three.js).
+42: 
+43: ## Workflow & Documentation Requirements
+44: 
+45: - Document every step of the process (prompts used, tools used, decisions made).
+46: - Export coding-agent task transcripts/prompts into text files.
+47: - Log **human time only** (not computer/processing time) in the README.
+48: - Deliverables: game folder, source files folder, README with creative/technical approach, asset sources, challenges and resolutions.
+49: 
+50: ## Definition of Done
+51: 
+52: - `index.html` opens locally (double-click / file://) and the game runs with the Fish of Fortune reskin.
+53: - All 3D models render in the Three.js scene; character plays its dance animation.
+54: - All assets compressed; game folder is fully self-contained except the two CDN library imports.
+
+(End of file - total 54 lines)
+</content>
+Called the Read tool with the following input: {"filePath":"/home/mioqwe/desktop/sett/Game.html"}
+<path>/home/mioqwe/desktop/sett/Game.html</path>
+<type>file</type>
+<content>
+1: <!DOCTYPE html>
+2: <html lang="en">
+3: <head>
+4:     <meta charset="UTF-8">
+5:     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+6:     <title>Lane Runner Game</title>
+7:     <style>
+8:         body {
+9:             margin: 0;
+10:             padding: 0;
+11:             display: flex;
+12:             justify-content: center;
+13:             align-items: center;
+14:             height: 100vh;
+15:             background-color: #f0f0f0;
+16:             font-family: Arial, sans-serif;
+17:         }
+18:         
+19:         #game-container {
+20:             position: relative;
+21:         }
+22:         
+23:         canvas {
+24:             border: 2px solid #333;
+25:             background-color: #fff;
+26:         }
+27:         
+28:         #game-stats {
+29:             position: absolute;
+30:             top: 10px;
+31:             left: 10px;
+32:             font-size: 18px;
+33:             font-weight: bold;
+34:         }
+35:         
+36:         #game-over, #game-win {
+37:             position: absolute;
+38:             top: 50%;
+39:             left: 50%;
+40:             transform: translate(-50%, -50%);
+41:             background-color: rgba(0, 0, 0, 0.7);
+42:             color: white;
+43:             padding: 20px;
+44:             border-radius: 10px;
+45:             text-align: center;
+46:             display: none;
+47:         }
+48:         
+49:         button {
+50:             margin-top: 10px;
+51:             padding: 8px 16px;
+52:             font-size: 16px;
+53:             cursor: pointer;
+54:         }
+55:     </style>
+56: </head>
+57: <body>
+58:     <div id="game-container">
+59:         <canvas id="gameCanvas" width="400" height="600"></canvas>
+60:         <div id="game-stats">Coins: 0 | Lives: 3</div>
+61:         <div id="game-over">
+62:             Game Over!
+63:             <br>
+64:             <button id="restart-button">Play Again</button>
+65:         </div>
+66:         <div id="game-win">
+67:             You Win!
+68:             <br>
+69:             <button id="play-again-button">Play Again</button>
+70:         </div>
+71:     </div>
+72: 
+73:     <script>
+74:         // Game variables
+75:         const canvas = document.getElementById('gameCanvas');
+76:         const ctx = canvas.getContext('2d');
+77:         const gameStats = document.getElementById('game-stats');
+78:         const gameOverScreen = document.getElementById('game-over');
+79:         const gameWinScreen = document.getElementById('game-win');
+80:         const restartButton = document.getElementById('restart-button');
+81:         const playAgainButton = document.getElementById('play-again-button');
+82:         
+83:         // Game settings
+84:         const laneCount = 5;
+85:         const laneWidth = canvas.width / laneCount;
+86:         const playerSize = 30;
+87:         const objectSize = 20;
+88:         const playerY = canvas.height - playerSize - 10;
+89:         let playerLane = Math.floor(laneCount / 2);
+90:         let coins = 0;
+91:         let lives = 3;
+92:         let gameRunning = true;
+93:         
+94:         // Arrays to store game objects
+95:         let fallingObjects = [];
+96:         
+97:         // Object types
+98:         const OBJECT_TYPES = {
+99:             COIN: { value: 1, color: 'yellow', shape: 'circle' },
+100:             GEM: { value: 10, color: 'purple', shape: 'diamond' },
+101:             OBSTACLE: { value: 0, color: 'red', shape: 'x' }
+102:         };
+103:         
+104:         // Initialize the game
+105:         function init() {
+106:             coins = 0;
+107:             lives = 3;
+108:             fallingObjects = [];
+109:             playerLane = Math.floor(laneCount / 2);
+110:             gameRunning = true;
+111:             gameOverScreen.style.display = 'none';
+112:             gameWinScreen.style.display = 'none';
+113:             updateStats();
+114:         }
+115:         
+116:         // Move player left or right
+117:         function movePlayer(direction) {
+118:             if (!gameRunning) return;
+119:             
+120:             if (direction === 'left' && playerLane > 0) {
+121:                 playerLane--;
+122:             } else if (direction === 'right' && playerLane < laneCount - 1) {
+123:                 playerLane++;
+124:             }
+125:         }
+126:         
+127:         // Add a new falling object
+128:         function addFallingObject() {
+129:             if (!gameRunning) return;
+130:             
+131:             const lane = Math.floor(Math.random() * laneCount);
+132:             
+133:             // Use weighted probabilities to make gems rare
+134:             const rand = Math.random();
+135:             let type;
+136:             
+137:             if (rand < 0.15) {
+138:                 // 15% chance for gems (rare)
+139:                 type = OBJECT_TYPES.GEM;
+140:             } else if (rand < 0.60) {
+141:                 // 45% chance for coins
+142:                 type = OBJECT_TYPES.COIN;
+143:             } else {
+144:                 // 40% chance for obstacles
+145:                 type = OBJECT_TYPES.OBSTACLE;
+146:             }
+147:             
+148:             fallingObjects.push({
+149:                 lane: lane,
+150:                 y: -objectSize,
+151:                 type: type,
+152:                 speed: 2 + Math.random() * 2  // Random speed between 2 and 4
+153:             });
+154:         }
+155:         
+156:         // Update all game objects
+157:         function update() {
+158:             if (!gameRunning) return;
+159:             
+160:             // Update falling objects
+161:             for (let i = fallingObjects.length - 1; i >= 0; i--) {
+162:                 const obj = fallingObjects[i];
+163:                 obj.y += obj.speed;
+164:                 
+165:                 // Check if object is out of bounds
+166:                 if (obj.y > canvas.height) {
+167:                     fallingObjects.splice(i, 1);
+168:                     continue;
+169:                 }
+170:                 
+171:                 // Check collision with player
+172:                 const playerX = playerLane * laneWidth + laneWidth / 2;
+173:                 const objX = obj.lane * laneWidth + laneWidth / 2;
+174:                 
+175:                 const distance = Math.sqrt(
+176:                     Math.pow(playerX - objX, 2) + 
+177:                     Math.pow(playerY - obj.y, 2)
+178:                 );
+179:                 
+180:                 if (distance < (playerSize + objectSize) / 2) {
+181:                     // Collision detected
+182:                     if (obj.type === OBJECT_TYPES.OBSTACLE) {
+183:                         lives--;
+184:                         updateStats();
+185:                         if (lives <= 0) {
+186:                             gameOver();
+187:                         }
+188:                     } else {
+189:                         coins += obj.type.value;
+190:                         updateStats();
+191:                         if (coins >= 100) {
+192:                             gameWin();
+193:                         }
+194:                     }
+195:                     fallingObjects.splice(i, 1);
+196:                 }
+197:             }
+198:             
+199:             // Randomly add new objects
+200:             if (Math.random() < 0.02) {  // 2% chance each frame
+201:                 addFallingObject();
+202:             }
+203:         }
+204:         
+205:         // Draw everything on canvas
+206:         function draw() {
+207:             // Clear canvas
+208:             ctx.clearRect(0, 0, canvas.width, canvas.height);
+209:             
+210:             // Draw lanes (faint lines)
+211:             ctx.strokeStyle = '#ddd';
+212:             ctx.lineWidth = 1;
+213:             for (let i = 1; i < laneCount; i++) {
+214:                 const x = i * laneWidth;
+215:                 ctx.beginPath();
+216:                 ctx.moveTo(x, 0);
+217:                 ctx.lineTo(x, canvas.height);
+218:                 ctx.stroke();
+219:             }
+220:             
+221:             // Draw player (blue box)
+222:             ctx.fillStyle = 'blue';
+223:             const playerX = playerLane * laneWidth + (laneWidth - playerSize) / 2;
+224:             ctx.fillRect(playerX, playerY, playerSize, playerSize);
+225:             
+226:             // Draw falling objects
+227:             for (const obj of fallingObjects) {
+228:                 const objX = obj.lane * laneWidth + laneWidth / 2;
+229:                 
+230:                 ctx.fillStyle = obj.type.color;
+231:                 
+232:                 if (obj.type.shape === 'circle') {
+233:                     // Draw coin (yellow circle)
+234:                     ctx.beginPath();
+235:                     ctx.arc(objX, obj.y, objectSize / 2, 0, Math.PI * 2);
+236:                     ctx.fill();
+237:                 } else if (obj.type.shape === 'diamond') {
+238:                     // Draw gem (purple diamond)
+239:                     ctx.beginPath();
+240:                     ctx.moveTo(objX, obj.y - objectSize / 2);
+241:                     ctx.lineTo(objX + objectSize / 2, obj.y);
+242:                     ctx.lineTo(objX, obj.y + objectSize / 2);
+243:                     ctx.lineTo(objX - objectSize / 2, obj.y);
+244:                     ctx.closePath();
+245:                     ctx.fill();
+246:                 } else if (obj.type.shape === 'x') {
+247:                     // Draw obstacle (red X)
+248:                     ctx.lineWidth = 3;
+249:                     ctx.strokeStyle = obj.type.color;
+250:                     const size = objectSize / 2;
+251:                     ctx.beginPath();
+252:                     ctx.moveTo(objX - size, obj.y - size);
+253:                     ctx.lineTo(objX + size, obj.y + size);
+254:                     ctx.moveTo(objX + size, obj.y - size);
+255:                     ctx.lineTo(objX - size, obj.y + size);
+256:                     ctx.stroke();
+257:                 }
+258:             }
+259:         }
+260:         
+261:         // Game loop
+262:         function gameLoop() {
+263:             update();
+264:             draw();
+265:             requestAnimationFrame(gameLoop);
+266:         }
+267:         
+268:         // Update statistics display
+269:         function updateStats() {
+270:             gameStats.innerText = `Coins: ${coins} | Lives: ${lives}`;
+271:         }
+272:         
+273:         // Game over
+274:         function gameOver() {
+275:             gameRunning = false;
+276:             gameOverScreen.style.display = 'block';
+277:         }
+278:         
+279:         // Game win
+280:         function gameWin() {
+281:             gameRunning = false;
+282:             gameWinScreen.style.display = 'block';
+283:         }
+284:         
+285:         // Event listeners
+286:         document.addEventListener('keydown', (e) => {
+287:             // Arrow keys
+288:             if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+289:                 movePlayer('left');
+290:             } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+291:                 movePlayer('right');
+292:             }
+293:         });
+294:         
+295:         restartButton.addEventListener('click', init);
+296:         playAgainButton.addEventListener('click', init);
+297:         
+298:         // Start the game
+299:         init();
+300:         gameLoop();
+301:     </script>
+302: </body>
+303: </html>
+
+(End of file - total 303 lines)
+</content>
+Called the Read tool with the following input: {"filePath":"/home/mioqwe/desktop/sett/DESIGN.md"}
+<path>/home/mioqwe/desktop/sett/DESIGN.md</path>
+<type>file</type>
+<content>
+1: # DESIGN.md — Fish of Fortune UI/UX Reskin Guidelines
+2: 
+3: Based on the official "Fish of Fortune" references (Whalo Games):
+4: - Behance: *Fish of Fortune (Lands chapter 1)* — level/environment art
+5: - ArtStation: *Boosters / Fish Collection* — in-game UI screens
+6: 
+7: Recreated UI mockups (HTML sources in `design/screens/`, renders in `design/screenshots/`):
+8: 
+9: | Screenshot | Source | Shows |
+10: |---|---|---|
+11: | `design/screenshots/01-hud.png` | `design/screens/01-hud.html` | Main gameplay HUD (top bar, level progress, build cards, CTA) |
+12: | `design/screenshots/02-collection.png` | `design/screens/02-collection.html` | Fish Collection screen (boosters, card grid, close button) |
+13: | `design/screenshots/03-elements.png` | `design/screens/03-elements.html` | UI elements sheet (buttons, pills, badges, bars, cards) |
+14: 
+15: ---
+16: 
+17: ## 1. Positioning
+18: 
+19: Layout is **portrait mobile-first** (reference frame ≈ 390×844), single column, thumb-driven. UI floats over the 3D world, never covering its center.
+20: 
+21: ### Top HUD bar (always visible)
+22: - Full-width row, pinned to the **top edge** with ~10–14 px safe-area inset.
+23: - Order, left → right:
+24:   1. **Level badge** — organic blob shape with level number, anchored top-left.
+25:   2. **Coin pill** (widest currency, takes remaining flex space).
+26:   3. **Gem pill**.
+27:   4. **Energy pill** (narrower, shows `current/max`).
+28:   5. **Hamburger menu button** — rounded square, anchored top-right.
+29: - Currency icons **overlap the left edge** of their white pills (−4…−6 px); a green `+` badge sits on each pill's top-right corner (opens the shop).
+30: 
+31: ### Level progress
+32: - Centered horizontally, directly **below the top bar** (~70 px from top).
+33: - Small all-caps label above the bar; reward (gem amount + chest icon) sits to the **right** of the bar.
+34: 
+35: ### Bottom zone (main screen)
+36: - **Build/shop cards**: row of 3 white cards, centered, ~110 px above the bottom edge.
+37: - **Primary CTA** (big green round "next/play" arrow): bottom-center, ~26 px from bottom. The CTA is the largest tappable element — always bottom-center under the thumb.
+38: - **Close button** on overlay screens (red round X): bottom-center, same slot as the CTA, overlapping panel content.
+39: 
+40: ### Overlay screens (e.g. Fish Collection)
+41: - Content lives on a **colored panel** (sand/yellow) whose top edge is a **wave/scallop shape**, starting ~150 px from the top; the ocean-blue background and top HUD bar stay visible above it.
+42: - **Screen title** is centered on the blue area, overlapping the panel's wave edge.
+43: - **Section headers** ("Boosters", "Collection", "To be collected") are centered brown text flanked by two thin white horizontal rules.
+44: - Boosters: horizontal row of 3 glass bowls, each with a timer pill centered beneath.
+45: - Collection: **3-column card grid**, 10 px gutters, vertically scrollable; locked cards are greyed silhouettes in a separate "To be collected" section.
+46: 
+47: ### Placement rules
+48: - Interactive elements: min ~44 px touch target, ≥7 px gaps.
+49: - Nothing interactive in the vertical middle of the screen — that space belongs to the 3D scene.
+50: - Depth order: 3D world → decorative waves → HUD pills/cards → modal panels → close/CTA buttons.
+51: 
+52: ---
+53: 
+54: ## 2. Coloring
+55: 
+56: Cheerful tropical palette: **cyan water + sandy yellow + warm accents**, always with white outlines and a darker "3D" bottom edge (fake extrusion via `box-shadow: 0 Npx 0 <darker>`).
+57: 
+58: ### Core palette
+59: 
+60: | Role | Color | Hex |
+61: |---|---|---|
+62: | Water background (top → bottom) | Sky cyan → ocean blue | `#3FC6F0` → `#25AEE8` → `#1B9CD8` |
+63: | Panel / sand | Cream → sand → gold | `#FFE9A8` → `#FFD86B` → `#FFC93C` |
+64: | Primary action (CTA, confirm, prices) | Leaf green gradient, dark-green base | `#8FE05C` → `#4CAF2E`, base `#37901D` |
+65: | Secondary action (menu, spin) | Orange gradient, burnt base | `#FFB53E` → `#FF8A3D`, base `#D96A1E` |
+66: | Neutral action | Blue gradient | `#5FD3F7` → `#2E9BDF`, base `#1B76B0` |
+67: | Destructive / close | Coral red gradient | `#FF7B7B` → `#E23A3A`, base `#B02020` |
+68: | Accent (titles, shop) | Bubblegum pink | `#FF8FC7` → `#F25CA2`, base `#C93B82` |
+69: | Coins | Gold | `#FFE28A` → `#FFC93C` → `#F0A420`, outline `#E08E00` |
+70: | Gems | Purple | `#E08CFF` → `#B05CE3` → `#7E2FBF` |
+71: | Energy | Orange bolt on amber | `#FFB03A` → `#F08A1D`, outline `#C96A00` |
+72: | Progress track | Deep sea blue | `#1668A8` |
+73: | Progress fill | Yellow gradient | `#FFE066` → `#FFC93C` → `#F5A623` |
+74: | Timer pill | Dark navy | `#3B3B6B` |
+75: | Text on pills/cards | Dark brown | `#4A3B2A` |
+76: | Section headers on sand | Warm brown | `#8A5A1E` |
+77: | Card surface | White | `#FFFFFF` |
+78: | Locked / disabled | Grey | `#8A8F9E`, `#9AA0B0`, `#B9BDC9` |
+79: 
+80: ### Coloring rules
+81: - **Every button/panel has a white 3–4 px border** and a solid darker bottom edge (4–6 px) for the squishy toy look.
+82: - Gradients run **light at top → saturated at bottom** (lit from above).
+83: - Text is white with a soft dark shadow (`0 2px 0 rgba(...)`) on colored surfaces; dark brown on white surfaces.
+84: - Screen titles: pink fill, **white stroke**, darker pink drop shadow.
+85: - Locked content is fully desaturated greyscale — color = affordance.
+86: - Gold stars `#FFC93C` with `#E08E00` shadow; currency green `+` badges always with white ring.
+87: 
+88: ---
+89: 
+90: ## 3. UI Elements
+91: 
+92: All elements are rounded, chunky, outlined — "inflatable toy" styling. Font: rounded geometric bold (reference uses a Baloo/Fredoka-style face).
+93: 
+94: ### Buttons
+95: - **Rectangular button**: `border-radius` 16–18 px, white 3 px border, colored gradient, 5 px darker base shadow, white bold uppercase label with drop shadow. Variants: green (primary), orange (secondary), blue (neutral), pink (shop/promo).
+96: - **Circle icon buttons** (Ø 56–74 px): same treatment, single white glyph (▶ play/next, ✕ close).
+97: - **Hamburger menu**: orange rounded square, three white bars.
+98: - **Green `+` badge**: 19–22 px circle on currency pills — opens purchase flow.
+99: 
+100: ### Pills & badges
+101: - **Currency pill**: white capsule (h 34 px, radius 20 px), currency icon overlapping left edge, brown semibold number, green `+` top-right.
+102: - **Level badge**: irregular blob (asymmetric border-radius), blue fill, white border, rotated −6°, white level number.
+103: - **Timer pill**: dark navy capsule, white monospace-ish `HH:MM:SS`, sits under booster bowls.
+104: - **"NEW" ribbon**: red gradient tag on card's top-right corner, slightly rotated, notched corner.
+105: 
+106: ### Progress
+107: - **Level progress bar**: deep-blue track with white 3 px border, yellow gradient fill, centered white % label; reward preview (gem + chest) to its right.
+108: - **Card progress**: split capsule — white segment with brown `current/max` text + solid orange segment; blue circle level badge on its left.
+109: 
+110: ### Cards
+111: - **Build card (HUD)**: white rounded card (radius 20 px) with item thumbnail on light-blue tile + green price tag (coin icon + amount); purchased state swaps price for a white checkmark on green.
+112: - **Collection card**: white card → blue-gradient image tile → gold star rating (1–3) → footer with level badge + split progress capsule. States: normal, **NEW** (red ribbon), **locked** (grey silhouette, `?` badge).
+113: 
+114: ### Panels & structure
+115: - **Overlay panel**: solid warm-yellow sheet with scalloped/wave top edge separating it from the blue header zone.
+116: - **Section header**: centered brown bold text + thin white rules on both sides.
+117: - **Booster bowl**: white/glass dome with purple liquid at the bottom, character inside, timer pill below.
+118: 
+119: ### Feedback & motion (for implementation)
+120: - Buttons squish on press (scale 0.92–0.95 + base shadow collapse).
+121: - Rewards: particle burst (coins/gems), card flip on unlock.
+122: - Booster receive/expire: pop-in scale animation, dissolve on use.
+123: - Waves/water idle animation behind HUD; CTA gentle idle pulse.
+124: 
+125: ---
+126: 
+127: ## Asset / implementation notes for this project
+128: - These mockups are static HTML+CSS (`design/screens/*.html`) rendered at 390×844 with headless Chrome — they are **design targets**, not game code.
+129: - In the game, rebuild these as Tailwind-styled DOM overlays (per AGENTS.md: DOM for UI, Three.js for world); replace emoji placeholders with compressed WebP sprite icons in `assets/`.
+130: - Reference palette hexes above are the source of truth for Tailwind config / inline classes.
+
+(End of file - total 130 lines)
+</content>
+
+=== PROMPT 3 ===
+change coints to match this style: 
+[Image 1]
+
+=== PROMPT 4 ===
+we should collect coins, death should decrease coins counter by exponent - each game should take 20 coins to play, initialy player should have 100 coins. 
+player can buy: 
+1. shield for his fish (should look like fish metal armor around it), so it should give additional 1 health for next mine, then this shield should break).
+2. user should be asked to use energy when he has not enough coins to play.
+
+=== PROMPT 5 ===
+add to "Out of energy" modal, button that will add +1 energy
+
+=== PROMPT 6 ===
+just a small +1 green button near Cancel like grid 3 parts cancel button and 1 part for this +1 button
+
+=== PROMPT 7 ===
+now energy used as fish health, but its just energy to play a game:), just set intial health for each run to 3 for the fish. 
+let energy be like currency to buy new runs.
+
+=== PROMPT 8 ===
+remove levels from this game, it should be infinite. 
+also add portals, the portals should look like: 
+[Image 1] 
+(oxygen explosion underthe water) - but those portal-explosions should be at the edges of the screen. 
+
+think about how to build this effect, and this portal should slide from top to bottom - so player can skip this - or move into. 
+
+Then after user enters this portal - he should go to another location (basicaly just change background color of the game, and create slide effect on teleportation
+
+=== PROMPT 9 ===
+So we have implemented portals, that teleports us to different background/levels. 
+Now lets make those portals different: 
+- 3 types of portals/ 3 different types of levels. 
+1. Purple, there all the coins should be replaced with dimonds
+2. red, there speed goes 3 times up faster (no coins, no dimonds, faster bombs, a little more bombs, BUT after player goes out of this level it restores all the energy)
+3. Golden: (only coins in here and player will be forced to move out after he collects certain amount of coins by on top watterfall.)
+
+Implement those.
+
+=== PROMPT 10 ===
+all the portals are the same blue colored bubbles
+
+=== PROMPT 11 ===
+also fix particles of golden portal level that goes from top, cuz now it looks like just 3 lines goes from top. Use other effect
+
+=== PROMPT 12 ===
+try other effects for this watterfall
+
+=== PROMPT 13 ===
+player can buy: 
+1. shield 
+2. now its flag - i dont know what is this ( generated by ai agent). Lets change it to grow our fish, basicaly it should just growit by 1.1x (make sure to grow the same size shield) this upgrade should increase health count of the fish, each next health upgrade should cost x2. 
+3. for this slot, it should create small baby fishes around main one... which would catch all the valuable coins dimonds, but not bomb... just like fish swarm:) 
+
+
+Also re-calibrate gaming economics, make sure it sticks each other. Do not overcomplicate this.
+
+=== PROMPT 14 ===
+Red level is too fast... make speed increase for red level less agresive. 
+then implement.
+
+Also fix those bugs: 
+1. Hearts do not disapear when fish receives bomb. it just counts hearts... but ui stays still.
+2. make playagain coin tax less agresive.
+3. each next shield should cost x2
+4. also fish swarm third ability should be active like 15 seconds (visualize this timer around the ability button), next use of this ability should cost x2
+
+=== PROMPT 15 ===
+hearts on top, not updating
+
+=== PROMPT 16 ===
+[Image 1]  
+
+make top bar smaller - compact items between each other. 
+align top bar items. 
+
+especialy energy and dimonds panes 
+[Image 2] 
+
+[Image 3] 
+move ability buttons lower.
+
+=== PROMPT 17 ===
+generate 6 different types of fish, and instead of collection in menu -> create shop with those fishes, make sure they are the same size as main one (so shield will be suitable for all of them). set price for them in dimonds. 
+
+Requirements for fishes: 
+- there should be god fish (golden one) 
+- devil fish
+- and purple dimond fish
+
+=== PROMPT 18 ===
+three others at your own choice.
+
+=== PROMPT 19 ===
+lets also fine-tune our portal visuals: 
+1. make more bubbles
+2. make them closer to edge of the screen -> so portal will feel more like portal (cuz now its like circle with bubbles
+
+give me for a review
+
+=== PROMPT 20 ===
+add pause button near menu button
+
+=== PROMPT 21 ===
+pause should just pause game, without any modals or somethjing like that, it should let me create screenshots of the game (create this button out of the game screen)
+
+=== PROMPT 22 ===
+add background music (lower volume by default)
+
+=== PROMPT 23 ===
+Then we should do recoloring of the game. 
+Use more brighter colors for: 
+1. fishes 
+2. coins
+3. dimonds 
+
+*use gradients, shading for them*
+
+=== PROMPT 24 ===
+remove double tap zoom functinality... causes zoom on smartphones.
+
+=== PROMPT 25 ===
+make coins brighter, you can use blender mcp to redesign it if needed, make them less meshy
+
+=== PROMPT 26 ===
+Update the game with those ui/ux and game changes: 
+
+1. Make all the text and ui/ux elements bigger. 
+2. main screen [Image 1]  "Fish of Fortune" fix text outline. 
+2.1. Create visual buttons of "a" "d" , arrow keys
+3. Update top bar coin counters, dimond counters, enegry with: 
+- with something like this [Image 2]  
+*add background colors to those containers* 
+*outline those containers*
+
+Do screenshots while implementing those features
+
+=== PROMPT 27 ===
+[Image 1]  change energy icon
+
+=== PROMPT 28 ===
+continue
+
+=== PROMPT 29 ===
+Now, lets implement guide for the first run of the game that will be managed by variable, so after page reload this guide will start over again. 
+Guide: 
+1. We have guide how to move fish at the starting screen via buttons, but players from the phone will tap on the screen, so we should generate an image of png hands that will hover first couple seconds overflowing the screen, so player can visualy understand how to move a fish right or left. 
+2. When player will see the first portal we should stop the game and show modal with @assets/images/ - in this folder i have created 3 screenshots of 3 different types of portals, on this modal we should show those 3 portal types and in couple words say what they does for example: 
+- "Gold rush"
+- "Dimond rush" 
+- "die or refresh" 
+
+Visualization: 
+try to combine those 3 images in single modal, with descriptions that i said before. 
+add the same play button that we used before on main screen, but make it smaller.
+at the top of the modal create header "Portals" with same outline that used in our game "Fish of fortune" 
+*rounded corners for those screenshots of those portals* 
+
+
+During implementation do screenshots to verify visuals
+
+=== PROMPT 30 ===
+Lets use blur on menu open state for the game, cuz hearts and header text visuals feels stacked on top of each other, so lets on menu pop apply blur on the game. 
+Also lets use blur instead of modal for the guide modal. 
+
+*do screenshots while implementing those features, make sure text is visible in guide pauses*
+
+=== PROMPT 31 ===
+[Image 1]  pointed where blur should be applied in menu
+
+=== PROMPT 32 ===
+[Image 1] guide modal still exist, just remove it, make sure text is visible
+
+=== PROMPT 33 ===
+now lets commit changes, and lets create git workspace to try @assets/images/background.jpeg as background. 
+We used different colors for the background based on level where we are, red, yellow, purple. 
+Now lets use this background and change only lightning from the top to visualize level. 
+
+Called the Read tool with the following input: {"filePath":"/home/mioqwe/desktop/sett/assets/images/background.jpeg"}
+Image read successfully
+
+=== PROMPT 34 ===
+also start another 
+python3 -m http.server 8000 --bind 0.0.0.0 > /tmp/opencode/preview.log 2>&1 & sleep 1; hostname -I | awk '{print $1}'
+live server for this workspace on port 8001, so i can see difference between those game versions.
+
+=== PROMPT 35 ===
+feels a weird, so lets try to remove from this try/bg-image branch/workspace 3d element from the background. 
+
+also lets fix for both branches lights from the top, they are just floating on the screen and not stick to top edge of the screen. 
+
+[Image 1] - i have pointed to those issues on this imag e
+
+=== PROMPT 36 ===
+[Image 1]  remove this bottom staff from try/bg-image branch - looks so bad
+
+=== PROMPT 37 ===
+*from background, i think just make this @assets/images/background.webp to be as full screen backgrouind 
+Called the Read tool with the following input: {"filePath":"/home/mioqwe/desktop/sett/assets/images/background.webp"}
+Image read successfully
+
+=== PROMPT 38 ===
+update our light rays with: 
+Underwater scene with **diffuse** and **softly refracted** sunbeams. Use **volumetric lighting** to create a dense, hazy atmosphere. Apply **subtle underwater caustics** (rippled light patterns) throughout the water column and on the seabed. Make the light rays bend and scatter slightly as they pass through the water. 
+
+also make sure to style them accordingly to level where player is red, yellow, white, purple
+
+=== PROMPT 39 ===
+also lets try to apply those @assets/images/red-bg.jpeg @assets/images/yellow-bg.jpeg @assets/images/purp-bg.jpeg  on those 3 different levels, make sure to preload those images. 
+
+
+Called the Read tool with the following input: {"filePath":"/home/mioqwe/desktop/sett/assets/images/red-bg.jpeg"}
+Image read successfully
+Called the Read tool with the following input: {"filePath":"/home/mioqwe/desktop/sett/assets/images/yellow-bg.jpeg"}
+Image read successfully
+Called the Read tool with the following input: {"filePath":"/home/mioqwe/desktop/sett/assets/images/purp-bg.jpeg"}
+Image read successfully
+
+=== PROMPT 40 ===
+also lets change color of background fishes that are swimming around
+
+=== PROMPT 41 ===
+for each level
+
+=== PROMPT 42 ===
+lets use this try/bg branch, merge changes from it into master.
+
+Then lets update our game with CTA calls. 
+1. after player dies, no more hearts
+2. after end of golden rush level
+3. after user buys another fish 
+4. add others on demand 
+
+implement end card, with download button animate it (green color), blured background of this nice looking "fish of fortune" logo @assets/images/fish-fortune-logo.webp 
+
+let our fish fly around this logo and download button, just to swim around this (not on top of that) 
+
+add lightning that we are using as underwater lightning rays as layer on top of blur. 
+
+*do screenshots while implementing those changes*
+
+
+then give me for a review
+Called the Read tool with the following input: {"filePath":"/home/mioqwe/desktop/sett/assets/images/fish-fortune-logo.webp"}
+Image read successfully
+
+=== PROMPT 43 ===
+fixes: 
+
+[Image 1]  remove border around logo, move close button to top-right corner, make button smaller
+
+=== PROMPT 44 ===
+continue
+
+=== PROMPT 45 ===
+Create public repo through gh cli, create github page for this game, so anybody can try it.  
+
+Create small readable @README.md for this project (only key features, so reviewer can try them)  
+
+
+here the text of the task:
+- point out that Farm House Model:
+Style: Reflecting the aesthetic of Klondike Adventure commercials.
+Character Model:
+Requirements: A cute humanoid character featuring a Mixamo dancing animation.
+Animation: Ensure the exported GLB supports the animation in a game-ready format.  those models not created. 
+
+ 
+```
+Part 1: HTML Game Reskin
+Objective
+Reskin a simple HTML game so that it fits the aesthetic of “Fish of Fortune.” (Android / IOS) 
+Requirements
+Base Code: You will be provided with a simple HTML game.
+Tools:
+Visual Studio Code: Use Visual Studio code to work on the project.
+Coding Agents:
+Cline for VS code: Integrate Cline and use OpenRouter key as it is free. The models that you can use for code modification are listed below (you are free to use other models if you see fit):
+google/gemini-2.0-pro-exp-02-05:free
+deepseek/deepseek-r1:free
+Gemini Code Assist for VScode
+Gemini CLI (run in a terminal inside VScode terminal)
+Copilot in VScode
+Qwen coder 
+Or any coding agent/tool based AI
+
+Workflow:
+ Enhance the game by utilizing AI coding agent to modify the visuals and incorporate any other necessary elements. 
+You can tweak the code manually for the small adjustments after Cline did code modifications. 
+
+Art Direction: Change the game's visual appearance to match the world of Fish of Fortune. Enhance the look with:
+Custom reskin elements (backgrounds, sprites, UI components)
+Particle effects and any additional visual effects that boost the “amazing” and immersive feel
+Any other elements that will enhance the UX
+
+Technical: 
+Ensure all assets are compressed to the smallest possible file size.
+Use Gen-Ai models as the start of your visual enhancement
+
+Documentation:
+Record / document every step of your process.
+Export your coding agent AI tasks into text files.
+Write down only your time on the project, not computer time.
+
+Deliverables: Reskin folder with:
+Game Folder - A folder containing the updated HTML game, all necessary assets (images, audio files, etc.), and any supporting files so that the game can be run locally from a single folder.
+Source Folder - A folder with all the original source files. This includes PSDs, initial image generations, and any other relevant files created for this project.
+A text file (e.g., README.txt/PDF ) detailing your workflow, including the sources used and how you implemented Cline tasks.
+
+
+Part 2: 3D Models Creation
+Objective
+Create three optimized 3D models (in GLB format) that are “game ready” with low-poly count and optimized textures.
+Workflow - Generative AI Pipeline:
+2D Concept: Use a generative AI tool to create a 2D image that will serve as the foundation for the 3D model.
+3D Conversion: Convert the 2D concept into a 3D model using your preferred techniques or tools.
+Optimization: Ensure the resulting GLB model is optimized for real-time game performance by keeping polygon counts and texture sizes low. Add skin and rigging if necessary, but prioritize keeping the model lightweight.
+Models to Create
+Fish Model:
+Style: In the style of Fish of Fortune.
+Farm House Model:
+Style: Reflecting the aesthetic of Klondike Adventure commercials.
+Character Model:
+Requirements: A cute humanoid character featuring a Mixamo dancing animation.
+Animation: Ensure the exported GLB supports the animation in a game-ready format.
+Deliverables
+GLB folder - containing a folder per model with:
+Model and texture
+Any other files that were generated along the way (a folder for each model files)
+Text file with prompts used to generate assets and workflow summary
+
+Submission Guidelines
+Packaging:
+ Package your work into one ZIP file containing 2 folders:
+The reskinned HTML game folder.
+The GLB folder 
+Documentation:
+ Your README (or similarly named text file) should include:
+An explanation of your creative and technical approach.
+A list of all assets, sources, and external tools used.
+Detailed notes on how you implemented the Cline tasks.
+Any challenges encountered and how you resolved them.
+Execution:
+ The HTML game should run locally from a single folder. All GLB models must be optimized and ready to be integrated into a game environment. 
+
+```
+
+in other just stick to those requirements. 
+
+
+*Export your coding agent AI tasks into text files.* - make sure to do it through opencode export functionality (export only this session). Try somehow summarize parts of this file, for example: 
+1. initial game setup, then goes prompts
+2. background replacement, prompts 
+So reviewer can spend less time. 
+*Create Prompts.md file*
+
+project time: 1 hour 30 minutes.
+
+Also create zip folder (include in git tracking)
+
+
+make sure game and game assets under 5mb of memory - so it can be fast loaded almost with any internet bandwidth.
