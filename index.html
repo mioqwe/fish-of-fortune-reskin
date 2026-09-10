@@ -381,16 +381,22 @@ const scene = new THREE.Scene();
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
   scene.background = t;
 }
+const BG_KEYS = ['base', 'purple', 'red', 'gold'];
+const BG_TEX = {};
 if (window.BG_DATA) {
-  const bgImg = new Image();
-  bgImg.onload = () => {
-    const t = new THREE.Texture(bgImg);
-    t.colorSpace = THREE.SRGBColorSpace;
-    t.needsUpdate = true;
-    scene.background = t;
-  };
-  bgImg.src = window.BG_DATA;
+  BG_KEYS.forEach(k => {
+    const img = new Image();
+    img.onload = () => {
+      const t = new THREE.Texture(img);
+      t.colorSpace = THREE.SRGBColorSpace;
+      t.needsUpdate = true;
+      BG_TEX[k] = t;
+      if (BG_KEYS.indexOf(k) === locIndex) { scene.background = t; BG_TEX_APPLIED = true; }
+    };
+    img.src = window.BG_DATA[k];
+  });
 }
+let BG_TEX_APPLIED = false;
 scene.fog = new THREE.Fog(0x14649e, 16, 34);
 const camera = new THREE.PerspectiveCamera(48, 1, 0.1, 100);
 camera.position.set(0, -0.4, 15);
@@ -809,6 +815,8 @@ function applyLocation(i) {
   locIndex = i;
   for (const m of levelMats) m.color.set(LOCATIONS[i].ray);
   sun.color.set(LOCATIONS[i].sun);
+  const tex = BG_TEX[BG_KEYS[i]];
+  if (tex) { scene.background = tex; BG_TEX_APPLIED = true; }
 }
 
 const PORTAL_TYPES = {
