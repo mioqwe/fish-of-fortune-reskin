@@ -5,8 +5,6 @@ A reskin of a simple HTML lane-runner into a "Fish of Fortune"-style casual game
 **Play it live:** open the GitHub Pages link of this repo, or just double-click `index.html` (runs from `file://`, fully self-contained).
 
 ## How to play
-- Move: **← → / A / D** or **tap left/right half** of the screen (mobile).
-- Catch coins (+1) and gems (+10 coins, +1 gem). Dodge sea urchins.
 - Infinite run — score = coins collected; difficulty ramps over time.
 
 ## Key features to try
