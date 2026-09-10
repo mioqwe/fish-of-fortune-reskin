@@ -35,6 +35,11 @@ GAMEPLAY
     b) the first portal spawn pauses the game and shows the PORTALS modal
        (3 real screenshots, rounded corners: Diamond rush / Die or refresh /
        Gold rush) with a PLAY button to resume.
+  - CTA END CARD (showEndCard(), reusable): blurred game + animated light-ray
+    layer, Fish of Fortune logo badge, pulsing green DOWNLOAD button (store
+    link), the selected fish swimming an orbit AROUND the card, close X.
+    Triggers: 3 s after game over, after exiting the golden level
+    (waterfall flush), after buying a fish in the shop.
 
   ECONOMY (persistent wallet, saved to localStorage):
   - Player starts with 100 coins; every game costs 10 coins to play.
