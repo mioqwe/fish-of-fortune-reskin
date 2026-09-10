@@ -805,16 +805,17 @@ const bubbleTex = (() => {
 })();
 
 const LOCATIONS = [
-  { ray: 0xeafcff, sun: 0xeaf9ff },
-  { ray: 0xc77dff, sun: 0xd8b0ff },
-  { ray: 0xff6b5c, sun: 0xffb0a0 },
-  { ray: 0xffd94d, sun: 0xffe9a8 }
+  { ray: 0xeafcff, sun: 0xeaf9ff, fish: 0x0d5c8c },
+  { ray: 0xc77dff, sun: 0xd8b0ff, fish: 0x3d2a5e },
+  { ray: 0xff6b5c, sun: 0xffb0a0, fish: 0x5e1f26 },
+  { ray: 0xffd94d, sun: 0xffe9a8, fish: 0x5e4210 }
 ];
 let locIndex = 0;
 function applyLocation(i) {
   locIndex = i;
   for (const m of levelMats) m.color.set(LOCATIONS[i].ray);
   sun.color.set(LOCATIONS[i].sun);
+  for (const f of decor.bgFish) f.children[0].material.color.set(LOCATIONS[i].fish);
   const tex = BG_TEX[BG_KEYS[i]];
   if (tex) { scene.background = tex; BG_TEX_APPLIED = true; }
 }
