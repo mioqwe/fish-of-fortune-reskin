@@ -75,6 +75,7 @@ html, body { touch-action: manipulation; -webkit-tap-highlight-color: transparen
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { scrollbar-width: none; }
 </style>
+<script src="assets/bg.js"></script>
 <script type="importmap">
 {
   "imports": {
@@ -380,7 +381,17 @@ const scene = new THREE.Scene();
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
   scene.background = t;
 }
-scene.fog = new THREE.Fog(0x1b9cd8, 16, 34);
+if (window.BG_DATA) {
+  const bgImg = new Image();
+  bgImg.onload = () => {
+    const t = new THREE.Texture(bgImg);
+    t.colorSpace = THREE.SRGBColorSpace;
+    t.needsUpdate = true;
+    scene.background = t;
+  };
+  bgImg.src = window.BG_DATA;
+}
+scene.fog = new THREE.Fog(0x14649e, 16, 34);
 const camera = new THREE.PerspectiveCamera(48, 1, 0.1, 100);
 camera.position.set(0, -0.4, 15);
 camera.lookAt(0, 0.6, 0);
@@ -623,6 +634,7 @@ function spawnObj(type, lane) {
 }
 
 const decor = { seaweed: [], rays: [], bgFish: [] };
+let rayMat;
 {
   const seabed = new THREE.Mesh(new THREE.BoxGeometry(34, 3, 24), mat(0xf0c060, { roughness: 1 }));
   seabed.position.set(0, -8.2, -4); scene.add(seabed);
@@ -654,11 +666,9 @@ const decor = { seaweed: [], rays: [], bgFish: [] };
       scene.add(coral);
     }
   }
+  rayMat = new THREE.MeshBasicMaterial({ color: 0xeafcff, transparent: true, opacity: .16, blending: THREE.AdditiveBlending, depthWrite: false });
   for (let i = 0; i < 3; i++) {
-    const ray = new THREE.Mesh(
-      new THREE.PlaneGeometry(rand(1.2, 2.2), 18),
-      new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: .07, blending: THREE.AdditiveBlending, depthWrite: false })
-    );
+    const ray = new THREE.Mesh(new THREE.PlaneGeometry(rand(1.2, 2.2), 18), rayMat);
     ray.position.set(rand(-3, 3), 2, -7 - i);
     ray.rotation.z = rand(-.3, -.15);
     ray.userData = { x0: ray.position.x, phase: rand(0, 6) };
@@ -802,23 +812,16 @@ const bubbleTex = (() => {
 })();
 
 const LOCATIONS = [
-  { stops: ['#3FC6F0', '#25AEE8', '#1B9CD8', '#1278B4'], fog: 0x1b9cd8 },
-  { stops: ['#B07FE8', '#8E5CD8', '#6B3FC0', '#3A2688'], fog: 0x6b3fc0 },
-  { stops: ['#FF9A7A', '#E85C6A', '#B03A5A', '#6E1F3A'], fog: 0xb03a5a },
-  { stops: ['#FFF3C4', '#FFD86B', '#F0B43C', '#C98A1E'], fog: 0xf0b43c }
+  { ray: 0xeafcff, sun: 0xeaf9ff },
+  { ray: 0xc77dff, sun: 0xd8b0ff },
+  { ray: 0xff6b5c, sun: 0xffb0a0 },
+  { ray: 0xffd94d, sun: 0xffe9a8 }
 ];
 let locIndex = 0;
 function applyLocation(i) {
   locIndex = i;
-  const L = LOCATIONS[i];
-  const c = document.createElement('canvas'); c.width = 2; c.height = 512;
-  const g = c.getContext('2d'), gr = g.createLinearGradient(0, 0, 0, 512);
-  L.stops.forEach((s, j) => gr.addColorStop(j / (L.stops.length - 1), s));
-  g.fillStyle = gr; g.fillRect(0, 0, 2, 512);
-  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
-  if (scene.background && scene.background.dispose) scene.background.dispose();
-  scene.background = tex;
-  scene.fog.color.set(L.fog);
+  if (rayMat) rayMat.color.set(LOCATIONS[i].ray);
+  sun.color.set(LOCATIONS[i].sun);
 }
 
 const PORTAL_TYPES = {
@@ -1628,7 +1631,7 @@ if (location.hash.startsWith('#loc')) {
   const i = Math.min(3, +location.hash.slice(4) || 1);
   applyLocation(i);
   level = i === 1 ? 'purple' : i === 2 ? 'red' : i === 3 ? 'gold' : 'base';
-  if (i > 0) { spawnPortal(); activePortal.y = 4; activePortal.m.position.y = 4; }
+  if (i > 0) { guidePortalsShown = true; spawnPortal(); activePortal.y = 4; activePortal.m.position.y = 4; }
 }
 if (location.hash === '#falls') { startGame(); applyLocation(3); level = 'gold'; startWaterfall(); }
 if (location.hash === '#upg') {
