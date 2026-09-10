@@ -75,6 +75,7 @@ html, body { touch-action: manipulation; -webkit-tap-highlight-color: transparen
 .no-scrollbar::-webkit-scrollbar { display: none; }
 .no-scrollbar { scrollbar-width: none; }
 </style>
+<script src="assets/bg.js"></script>
 <script type="importmap">
 {
   "imports": {
@@ -380,7 +381,23 @@ const scene = new THREE.Scene();
   const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
   scene.background = t;
 }
-scene.fog = new THREE.Fog(0x1b9cd8, 16, 34);
+const BG_KEYS = ['base', 'purple', 'red', 'gold'];
+const BG_TEX = {};
+if (window.BG_DATA) {
+  BG_KEYS.forEach(k => {
+    const img = new Image();
+    img.onload = () => {
+      const t = new THREE.Texture(img);
+      t.colorSpace = THREE.SRGBColorSpace;
+      t.needsUpdate = true;
+      BG_TEX[k] = t;
+      if (BG_KEYS.indexOf(k) === locIndex) { scene.background = t; BG_TEX_APPLIED = true; }
+    };
+    img.src = window.BG_DATA[k];
+  });
+}
+let BG_TEX_APPLIED = false;
+scene.fog = new THREE.Fog(0x14649e, 16, 34);
 const camera = new THREE.PerspectiveCamera(48, 1, 0.1, 100);
 camera.position.set(0, -0.4, 15);
 camera.lookAt(0, 0.6, 0);
@@ -402,6 +419,54 @@ function mat(color, opts = {}) {
   const key = color + JSON.stringify(opts);
   if (!matCache.has(key)) matCache.set(key, new THREE.MeshStandardMaterial({ color, roughness: .6, metalness: .05, flatShading: true, ...opts }));
   return matCache.get(key);
+}
+
+function beamTexture() {
+  const c = document.createElement('canvas'); c.width = 128; c.height = 256;
+  const g = c.getContext('2d');
+  const img = g.createImageData(128, 256);
+  for (let y = 0; y < 256; y++) {
+    for (let x = 0; x < 128; x++) {
+      const dx = (x - 64) / 64;
+      const a = Math.exp(-dx * dx * 4.5) * Math.pow(1 - y / 256, 1.3);
+      const i = (y * 128 + x) * 4;
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = 255;
+      img.data[i + 3] = a * 255;
+    }
+  }
+  g.putImageData(img, 0, 0);
+  return new THREE.CanvasTexture(c);
+}
+function causticTexture(rep) {
+  const S = 128;
+  const c = document.createElement('canvas'); c.width = c.height = S;
+  const g = c.getContext('2d');
+  const img = g.createImageData(S, S);
+  for (let y = 0; y < S; y++) {
+    for (let x = 0; x < S; x++) {
+      const u = x / S * Math.PI * 2, v = y / S * Math.PI * 2;
+      const n = Math.sin(3 * u + 2 * Math.sin(2 * v)) + Math.sin(2 * v + 2 * Math.sin(3 * u)) + Math.sin(2 * (u + v));
+      const a = Math.pow(Math.max(0, n / 3), 6);
+      const i = (y * S + x) * 4;
+      img.data[i] = img.data[i + 1] = img.data[i + 2] = 255;
+      img.data[i + 3] = a * 255;
+    }
+  }
+  g.putImageData(img, 0, 0);
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(rep, rep);
+  return t;
+}
+function hazeTexture() {
+  const c = document.createElement('canvas'); c.width = 4; c.height = 256;
+  const g = c.getContext('2d');
+  const gr = g.createLinearGradient(0, 0, 0, 256);
+  gr.addColorStop(0, 'rgba(255,255,255,.8)');
+  gr.addColorStop(.5, 'rgba(255,255,255,.25)');
+  gr.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = gr; g.fillRect(0, 0, 4, 256);
+  return new THREE.CanvasTexture(c);
 }
 
 const LANES = 5, SPACING = 1.4, PLAYER_Y = -2.6, SPAWN_Y = 8, KILL_Y = -7.5;
@@ -622,48 +687,30 @@ function spawnObj(type, lane) {
   o.m.position.set(laneX(lane), o.y, 0);
 }
 
-const decor = { seaweed: [], rays: [], bgFish: [] };
+const decor = { seaweed: [], rays: [], bgFish: [], caustics: [] };
+const levelMats = [];
 {
-  const seabed = new THREE.Mesh(new THREE.BoxGeometry(34, 3, 24), mat(0xf0c060, { roughness: 1 }));
-  seabed.position.set(0, -8.2, -4); scene.add(seabed);
-  const mound = new THREE.Mesh(new THREE.SphereGeometry(3.2, 12, 8), mat(0xffd86b, { roughness: 1 }));
-  mound.scale.set(1.4, .5, 1); mound.position.set(2.5, -6.6, -7); scene.add(mound);
-  const mound2 = new THREE.Mesh(new THREE.SphereGeometry(2.6, 12, 8), mat(0xf7cd66, { roughness: 1 }));
-  mound2.scale.set(1.3, .45, 1); mound2.position.set(-2.9, -6.5, -5); scene.add(mound2);
-  const charIsland = new THREE.Mesh(new THREE.SphereGeometry(1.1, 10, 8), mat(0x9aa0b0, { roughness: .95 }));
-  charIsland.scale.set(1.2, .5, .9); charIsland.position.set(-2.9, -4.45, -4.5); scene.add(charIsland);
-  for (const [x, z, s, c] of [[-3.4, -2.5, .7, 0xb9a98f], [3.8, -3.5, .55, 0x9aa0b0], [-1.6, -4.5, .45, 0xb9a98f]]) {
-    const r = new THREE.Mesh(new THREE.IcosahedronGeometry(s, 0), mat(c, { roughness: .95 }));
-    r.position.set(x, -6.4, z); r.rotation.set(rand(0, 3), rand(0, 3), 0); scene.add(r);
+  const beamTex = beamTexture();
+  for (let i = 0; i < 4; i++) {
+    const m = new THREE.MeshBasicMaterial({ map: beamTex, transparent: true, opacity: .4, blending: THREE.AdditiveBlending, depthWrite: false, color: 0xeafcff });
+    const ray = new THREE.Mesh(new THREE.PlaneGeometry(rand(1.4, 2.6), 26), m);
+    ray.position.set(rand(-3, 3), 6, -7 - i * .8);
+    ray.rotation.z = rand(-.28, -.1);
+    ray.userData = { x0: ray.position.x, phase: rand(0, 6), rot: ray.rotation.z, op: rand(.28, .45) };
+    scene.add(ray); decor.rays.push(ray); levelMats.push(m);
   }
-  for (let i = 0; i < 6; i++) {
-    const h = rand(1.4, 2.4);
-    const geo = new THREE.ConeGeometry(rand(.09, .16), h, 5);
-    geo.translate(0, h / 2, 0);
-    const w = new THREE.Mesh(geo, mat(i % 2 ? 0x2fa84f : 0x3ec46a, { roughness: .9 }));
-    w.position.set(rand(-4, 4), -6.7, rand(-4, -1.5));
-    w.userData.phase = rand(0, 6);
-    scene.add(w); decor.seaweed.push(w);
+  for (const [ry, rz, rep, ro, dx, dy] of [[1, -3, 2, .10, 1, .6], [-2, -5, 3, .07, -.7, 1]]) {
+    const cm = new THREE.MeshBasicMaterial({ map: causticTexture(rep), transparent: true, opacity: ro, blending: THREE.AdditiveBlending, depthWrite: false, color: 0xffffff });
+    cm.userData = { dx, dy };
+    const cp = new THREE.Mesh(new THREE.PlaneGeometry(12, 20), cm);
+    cp.position.set(0, ry, rz);
+    scene.add(cp);
+    levelMats.push(cm); decor.caustics.push(cm);
   }
-  for (const [x, z, c] of [[-3, -3, 0xff8fc7], [4.2, -2, 0xb05ce3]]) {
-    for (let i = 0; i < 3; i++) {
-      const h = rand(.4, .8);
-      const coral = new THREE.Mesh(new THREE.ConeGeometry(.12, h, 5), mat(c, { roughness: .7 }));
-      coral.position.set(x + rand(-.3, .3), -6.6 + h / 2, z + rand(-.2, .2));
-      coral.rotation.z = rand(-.25, .25);
-      scene.add(coral);
-    }
-  }
-  for (let i = 0; i < 3; i++) {
-    const ray = new THREE.Mesh(
-      new THREE.PlaneGeometry(rand(1.2, 2.2), 26),
-      new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: .07, blending: THREE.AdditiveBlending, depthWrite: false })
-    );
-    ray.position.set(rand(-3, 3), 6, -7 - i);
-    ray.rotation.z = rand(-.3, -.15);
-    ray.userData = { x0: ray.position.x, phase: rand(0, 6) };
-    scene.add(ray); decor.rays.push(ray);
-  }
+  const hazeMat = new THREE.MeshBasicMaterial({ map: hazeTexture(), transparent: true, opacity: .4, blending: THREE.AdditiveBlending, depthWrite: false, color: 0xffffff });
+  const haze = new THREE.Mesh(new THREE.PlaneGeometry(16, 10), hazeMat);
+  haze.position.set(0, 9, -6);
+  scene.add(haze); levelMats.push(hazeMat);
   for (let i = 0; i < 3; i++) {
     const f = new THREE.Group();
     const b = new THREE.Mesh(new THREE.SphereGeometry(.5, 8, 6), new THREE.MeshBasicMaterial({ color: 0x0d5c8c, transparent: true, opacity: .45 }));
@@ -679,59 +726,15 @@ const decor = { seaweed: [], rays: [], bgFish: [] };
 }
 
 const houseGroup = new THREE.Group();
-{
-  const base = new THREE.Mesh(new THREE.BoxGeometry(1.7, 1.2, 1.4), mat(0xfff3d6, { roughness: .9 }));
-  base.position.y = .6; houseGroup.add(base);
-  const roof = new THREE.Mesh(new THREE.ConeGeometry(1.45, .95, 4), mat(0xe2574c, { roughness: .8 }));
-  roof.position.y = 1.68; roof.rotation.y = Math.PI / 4; roof.scale.set(1.15, 1, .95); houseGroup.add(roof);
-  const door = new THREE.Mesh(new THREE.BoxGeometry(.4, .62, .06), mat(0x8a5a1e));
-  door.position.set(0, .31, .72); houseGroup.add(door);
-  for (const s of [1, -1]) {
-    const win = new THREE.Mesh(new THREE.BoxGeometry(.32, .32, .05), mat(0x8fd8f8, { roughness: .2, metalness: .3 }));
-    win.position.set(.52 * s, .75, .71); houseGroup.add(win);
-  }
-  const chim = new THREE.Mesh(new THREE.BoxGeometry(.24, .5, .24), mat(0xb07a35));
-  chim.position.set(.55, 1.75, 0); houseGroup.add(chim);
-  houseGroup.position.set(2.5, -3.9, -7);
-  const island = new THREE.Mesh(new THREE.SphereGeometry(1.6, 12, 8), mat(0xffd86b, { roughness: 1 }));
-  island.scale.set(1.15, .45, .85); island.position.set(2.5, -4.35, -7); scene.add(island);
-  const islandRock = new THREE.Mesh(new THREE.ConeGeometry(1.1, 1.5, 6), mat(0xb07a35, { roughness: 1 }));
-  islandRock.rotation.x = Math.PI; islandRock.position.set(2.5, -5.6, -7); scene.add(islandRock);
-  houseGroup.scale.setScalar(.85);
-  scene.add(houseGroup);
-}
+houseGroup.position.set(2.5, -3.9, -7);
+houseGroup.scale.setScalar(.85);
+scene.add(houseGroup);
 
 const charGroup = new THREE.Group();
-let charDance = true, mixer = null;
-{
-  const rock = new THREE.Mesh(new THREE.IcosahedronGeometry(.62, 0), mat(0x9aa0b0, { roughness: .95 }));
-  rock.position.y = -.3; charGroup.add(rock);
-  const body = new THREE.Mesh(new THREE.CapsuleGeometry(.24, .34, 4, 8), mat(0xff6b81, { roughness: .7 }));
-  body.position.y = .62; charGroup.add(body);
-  const head = new THREE.Mesh(new THREE.SphereGeometry(.26, 10, 8), mat(0xffd9b3, { roughness: .7 }));
-  head.position.y = 1.14; charGroup.add(head);
-  const hair = new THREE.Mesh(new THREE.SphereGeometry(.27, 10, 8), mat(0x6b4a2a, { roughness: .9 }));
-  hair.scale.set(1, .7, 1); hair.position.y = 1.28; charGroup.add(hair);
-  for (const s of [1, -1]) {
-    const eye = new THREE.Mesh(new THREE.SphereGeometry(.035, 6, 5), mat(0x2b2b3b));
-    eye.position.set(.09 * s, 1.16, .23); charGroup.add(eye);
-  }
-  const armGeo = new THREE.CapsuleGeometry(.07, .3, 4, 6);
-  armGeo.translate(0, -.18, 0);
-  for (const s of [1, -1]) {
-    const arm = new THREE.Mesh(armGeo, mat(0xffd9b3, { roughness: .7 }));
-    arm.position.set(.3 * s, .88, 0);
-    arm.name = s > 0 ? 'armR' : 'armL';
-    charGroup.add(arm);
-  }
-  for (const s of [1, -1]) {
-    const leg = new THREE.Mesh(new THREE.CapsuleGeometry(.08, .22, 4, 6), mat(0x3b6ea5, { roughness: .8 }));
-    leg.position.set(.12 * s, .2, 0); charGroup.add(leg);
-  }
-  charGroup.position.set(-2.9, -4.1, -4.5);
-  charGroup.scale.setScalar(.8);
-  scene.add(charGroup);
-}
+let charDance = false, mixer = null;
+charGroup.position.set(-2.9, -4.1, -4.5);
+charGroup.scale.setScalar(.8);
+scene.add(charGroup);
 
 function fitTo(obj, size) {
   const box = new THREE.Box3().setFromObject(obj);
@@ -802,23 +805,19 @@ const bubbleTex = (() => {
 })();
 
 const LOCATIONS = [
-  { stops: ['#3FC6F0', '#25AEE8', '#1B9CD8', '#1278B4'], fog: 0x1b9cd8 },
-  { stops: ['#B07FE8', '#8E5CD8', '#6B3FC0', '#3A2688'], fog: 0x6b3fc0 },
-  { stops: ['#FF9A7A', '#E85C6A', '#B03A5A', '#6E1F3A'], fog: 0xb03a5a },
-  { stops: ['#FFF3C4', '#FFD86B', '#F0B43C', '#C98A1E'], fog: 0xf0b43c }
+  { ray: 0xeafcff, sun: 0xeaf9ff, fish: 0x0d5c8c },
+  { ray: 0xc77dff, sun: 0xd8b0ff, fish: 0x3d2a5e },
+  { ray: 0xff6b5c, sun: 0xffb0a0, fish: 0x5e1f26 },
+  { ray: 0xffd94d, sun: 0xffe9a8, fish: 0x5e4210 }
 ];
 let locIndex = 0;
 function applyLocation(i) {
   locIndex = i;
-  const L = LOCATIONS[i];
-  const c = document.createElement('canvas'); c.width = 2; c.height = 512;
-  const g = c.getContext('2d'), gr = g.createLinearGradient(0, 0, 0, 512);
-  L.stops.forEach((s, j) => gr.addColorStop(j / (L.stops.length - 1), s));
-  g.fillStyle = gr; g.fillRect(0, 0, 2, 512);
-  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace;
-  if (scene.background && scene.background.dispose) scene.background.dispose();
-  scene.background = tex;
-  scene.fog.color.set(L.fog);
+  for (const m of levelMats) m.color.set(LOCATIONS[i].ray);
+  sun.color.set(LOCATIONS[i].sun);
+  for (const f of decor.bgFish) f.children[0].material.color.set(LOCATIONS[i].fish);
+  const tex = BG_TEX[BG_KEYS[i]];
+  if (tex) { scene.background = tex; BG_TEX_APPLIED = true; }
 }
 
 const PORTAL_TYPES = {
@@ -1457,7 +1456,15 @@ function tick() {
   });
 
   for (const w of decor.seaweed) w.rotation.z = Math.sin(t * 1.3 + w.userData.phase) * .12;
-  for (const r of decor.rays) r.position.x = r.userData.x0 + Math.sin(t * .3 + r.userData.phase) * .6;
+  for (const r of decor.rays) {
+    r.position.x = r.userData.x0 + Math.sin(t * .25 + r.userData.phase) * .5;
+    r.rotation.z = r.userData.rot + Math.sin(t * .4 + r.userData.phase) * .07;
+    r.material.opacity = r.userData.op * (0.7 + 0.3 * Math.sin(t * .55 + r.userData.phase * 2));
+  }
+  for (const cm of decor.caustics) {
+    cm.map.offset.x = t * .012 * cm.userData.dx;
+    cm.map.offset.y = t * .012 * cm.userData.dy;
+  }
   for (const f of decor.bgFish) {
     f.position.x += f.userData.speed * dt;
     if (f.position.x > 9) f.position.x = -9;
@@ -1628,7 +1635,7 @@ if (location.hash.startsWith('#loc')) {
   const i = Math.min(3, +location.hash.slice(4) || 1);
   applyLocation(i);
   level = i === 1 ? 'purple' : i === 2 ? 'red' : i === 3 ? 'gold' : 'base';
-  if (i > 0) { spawnPortal(); activePortal.y = 4; activePortal.m.position.y = 4; }
+  if (i > 0) { guidePortalsShown = true; spawnPortal(); activePortal.y = 4; activePortal.m.position.y = 4; }
 }
 if (location.hash === '#falls') { startGame(); applyLocation(3); level = 'gold'; startWaterfall(); }
 if (location.hash === '#upg') {
