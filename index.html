@@ -636,30 +636,6 @@ function spawnObj(type, lane) {
 const decor = { seaweed: [], rays: [], bgFish: [] };
 let rayMat;
 {
-  const seabed = new THREE.Mesh(new THREE.BoxGeometry(34, 3, 24), mat(0xf0c060, { roughness: 1 }));
-  seabed.position.set(0, -8.2, -4); scene.add(seabed);
-  for (const [x, z, s, c] of [[-3.4, -2.5, .7, 0xb9a98f], [3.8, -3.5, .55, 0x9aa0b0], [-1.6, -4.5, .45, 0xb9a98f]]) {
-    const r = new THREE.Mesh(new THREE.IcosahedronGeometry(s, 0), mat(c, { roughness: .95 }));
-    r.position.set(x, -6.4, z); r.rotation.set(rand(0, 3), rand(0, 3), 0); scene.add(r);
-  }
-  for (let i = 0; i < 6; i++) {
-    const h = rand(1.4, 2.4);
-    const geo = new THREE.ConeGeometry(rand(.09, .16), h, 5);
-    geo.translate(0, h / 2, 0);
-    const w = new THREE.Mesh(geo, mat(i % 2 ? 0x2fa84f : 0x3ec46a, { roughness: .9 }));
-    w.position.set(rand(-4, 4), -6.7, rand(-4, -1.5));
-    w.userData.phase = rand(0, 6);
-    scene.add(w); decor.seaweed.push(w);
-  }
-  for (const [x, z, c] of [[-3, -3, 0xff8fc7], [4.2, -2, 0xb05ce3]]) {
-    for (let i = 0; i < 3; i++) {
-      const h = rand(.4, .8);
-      const coral = new THREE.Mesh(new THREE.ConeGeometry(.12, h, 5), mat(c, { roughness: .7 }));
-      coral.position.set(x + rand(-.3, .3), -6.6 + h / 2, z + rand(-.2, .2));
-      coral.rotation.z = rand(-.25, .25);
-      scene.add(coral);
-    }
-  }
   rayMat = new THREE.MeshBasicMaterial({ color: 0xeafcff, transparent: true, opacity: .16, blending: THREE.AdditiveBlending, depthWrite: false });
   for (let i = 0; i < 3; i++) {
     const ray = new THREE.Mesh(new THREE.PlaneGeometry(rand(1.2, 2.2), 26), rayMat);
