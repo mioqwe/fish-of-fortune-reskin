@@ -56,6 +56,15 @@ html, body { touch-action: manipulation; -webkit-tap-highlight-color: transparen
 }
 .blurred { filter: blur(6px); }
 #scene, #midHud, #bottomZone, .waveDecor { transition: filter .25s ease; }
+.cta-ray {
+  position: absolute; top: -12%; height: 124%; width: 64px;
+  background: linear-gradient(to bottom, rgba(255,255,255,.55), rgba(255,255,255,0));
+  transform: skewX(-14deg);
+  filter: blur(5px);
+  animation: rayPulse 4.5s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes rayPulse { 0%,100% { opacity: .12 } 50% { opacity: .45 } }
 .fof-title span {
   color: #FF8FC7;
   font-weight: 700;
@@ -256,6 +265,20 @@ html, body { touch-action: manipulation; -webkit-tap-highlight-color: transparen
         </div>
       </div>
       <button id="portalGuidePlay" class="mt-1 rounded-[18px] bg-gradient-to-b from-[#8FE05C] to-[#4CAF2E] border-[3px] border-white shadow-[0_5px_0_#37901D] px-10 py-2.5 text-xl font-bold text-white uppercase active:translate-y-[3px] active:shadow-[0_2px_0_#37901D] transition" style="text-shadow:0 2px 0 rgba(0,0,0,.25)">Play</button>
+    </div>
+  </div>
+
+  <div id="endCard" class="hidden absolute inset-0 z-50 place-items-center backdrop-blur-md bg-[#0A3A5C]/35 overflow-hidden">
+    <div class="cta-ray" style="left:16%"></div>
+    <div class="cta-ray" style="left:48%;animation-delay:-1.5s"></div>
+    <div class="cta-ray" style="left:78%;animation-delay:-3s"></div>
+    <div id="endCardInner" class="relative flex flex-col items-center gap-6 animate-pop-in">
+      <img src="assets/images/fish-fortune-logo.webp" alt="Fish of Fortune" class="w-[290px] rounded-[22px] border-4 border-white shadow-[0_8px_0_rgba(0,0,0,0.25)]">
+      <a href="https://play.google.com/store/apps/details?id=com.whalo.games.fishoffortune" target="_blank" rel="noopener" class="animate-pulse-cta rounded-[20px] bg-gradient-to-b from-[#8FE05C] to-[#4CAF2E] border-[3px] border-white shadow-[0_6px_0_#37901D] px-12 py-4 text-2xl font-bold text-white uppercase tracking-wide active:translate-y-[3px] active:shadow-[0_2px_0_#37901D] transition" style="text-shadow:0 2px 0 rgba(0,0,0,.25)">Download</a>
+      <img id="endFish" src="assets/icons/fshop_lucky.webp" class="absolute w-16 h-16 pointer-events-none" style="left:50%;top:50%;margin:-32px 0 0 -32px" alt="">
+      <button id="endCardClose" class="absolute -top-4 -right-4 w-11 h-11 rounded-full bg-gradient-to-b from-[#FF7B7B] to-[#E23A3A] border-[3px] border-white shadow-[0_4px_0_#B02020] grid place-items-center active:scale-90 transition">
+        <svg viewBox="0 0 24 24" class="w-5 h-5 stroke-white" stroke-width="4" fill="none" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
     </div>
   </div>
 
@@ -1158,6 +1181,7 @@ function gameOver() {
   $('ctaWrap').classList.remove('invisible');
   $('cardsRow').style.marginBottom = '96px';
   setTimeout(() => setOverlay($('gameOverScreen'), true), 500);
+  setTimeout(() => showEndCard(), 3000);
 }
 
 function move(dir) {
@@ -1228,6 +1252,34 @@ $('portalGuidePlay').addEventListener('click', () => {
   if (state === 'paused') state = 'playing';
   setPauseIcon();
 });
+let endCardOn = false, endCardResume = false, orbitRAF = 0;
+function showEndCard() {
+  if (endCardOn) return;
+  endCardOn = true;
+  endCardResume = (state === 'playing');
+  if (endCardResume) { state = 'paused'; setPauseIcon(); }
+  $('endFish').src = 'assets/icons/fshop_' + save.selectedFish + '.webp';
+  setOverlay($('endCard'), true);
+  cancelAnimationFrame(orbitRAF);
+  const el = $('endFish'), box = $('endCardInner');
+  const step = () => {
+    if (!endCardOn) return;
+    const a = performance.now() / 1000 * .9;
+    const w = box.offsetWidth / 2 + 48, h = box.offsetHeight / 2 + 44;
+    const x = Math.cos(a) * w, y = Math.sin(a) * h;
+    el.style.transform = 'translate(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px) scaleX(' + (Math.sin(a) < 0 ? -1 : 1) + ')';
+    orbitRAF = requestAnimationFrame(step);
+  };
+  step();
+}
+function hideEndCard() {
+  endCardOn = false;
+  cancelAnimationFrame(orbitRAF);
+  setOverlay($('endCard'), false);
+  if (endCardResume) { state = 'playing'; setPauseIcon(); }
+}
+$('endCardClose').addEventListener('click', () => { sfx.click(); hideEndCard(); });
+
 function setGameBlur(on) {
   [$('scene'), $('midHud'), $('bottomZone'), ...document.querySelectorAll('.waveDecor')]
     .forEach(el => el.classList.toggle('blurred', on));
@@ -1317,6 +1369,7 @@ function renderShop() {
         applyFish(F.id);
         burst(player.position.x, PLAYER_Y, 0xb05ce3, 22, 2.6);
         sfx.gem(); updateHUD(); renderShop();
+        setTimeout(() => showEndCard(), 700);
       } else {
         sfx.hit(); shakeCard(card);
       }
@@ -1532,6 +1585,7 @@ function tick() {
         applyLocation(target);
         level = target === 1 ? 'purple' : target === 2 ? 'red' : target === 3 ? 'gold' : 'base';
         if (prevLevel === 'red') { save.energy = 3; floatNote('ENERGY FULL!', '#37901D'); }
+        if (prevLevel === 'gold') setTimeout(() => showEndCard(), 900);
         if (level === 'gold') goldCoins = 0;
         portalTimer = level === 'base' ? rand(12, 18) : rand(7, 11);
         for (const ty in pools) for (const o of pools[ty]) { o.active = false; o.m.visible = false; }
@@ -1626,6 +1680,7 @@ if (location.hash === '#hitlive') {
 }
 if (location.hash === '#hit') { startGame(); health = 1; updateHearts(); }
 if (location.hash === '#swarmon') { startGame(); spawnSwarm(); setSwarmUI(true); swarmTimer = 9; }
+if (location.hash === '#endcard') { startGame(); showEndCard(); }
 if (location.hash === '#over') { startGame(); health = 0; updateHearts(); gameOver(); }
 if (location.hash.startsWith('#portal')) { startGame(); spawnPortal(location.hash.split('-')[1]); activePortal.y = 3; activePortal.m.position.y = 3; }
 if (location.hash === '#warp') { startGame(); spawnPortal(); activePortal.lane = 2; activePortal.y = PLAYER_Y + .3; activePortal.m.position.y = activePortal.y; activePortal.m.position.x = 0; }
