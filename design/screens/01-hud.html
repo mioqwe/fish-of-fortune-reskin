@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>FoF — Main HUD</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:'Fredoka',sans-serif; }
+  body { width:390px; height:844px; overflow:hidden; position:relative;
+         background:linear-gradient(180deg,#3FC6F0 0%,#25AEE8 45%,#1B9CD8 100%); }
+
+  /* ---- decorative water / island ---- */
+  .sun-glow { position:absolute; top:-140px; left:50%; transform:translateX(-50%);
+              width:520px; height:520px; border-radius:50%;
+              background:radial-gradient(circle,rgba(255,255,255,.28) 0%,rgba(255,255,255,0) 62%); }
+  .island { position:absolute; left:50%; transform:translateX(-50%); }
+  .island.green { top:190px; width:250px; height:150px; border-radius:50%;
+                  background:radial-gradient(ellipse at 50% 30%,#8FE05C 0%,#5FBF3E 70%);
+                  box-shadow:0 10px 0 #4AA832; }
+  .island.dock { top:330px; width:200px; height:90px; border-radius:46%;
+                 background:radial-gradient(ellipse at 50% 30%,#C98D5A 0%,#A96F42 75%); }
+  .wave { position:absolute; width:60px; height:26px; border-radius:50%;
+          border:4px solid rgba(255,255,255,.45); border-top-color:transparent;
+          border-left-color:transparent; border-right-color:transparent; }
+
+  /* ---- top HUD bar ---- */
+  .topbar { position:absolute; top:14px; left:10px; right:10px;
+            display:flex; align-items:center; gap:7px; }
+  .lvl-badge { width:44px; height:44px; flex:none; position:relative;
+               background:#2E9BDF; border:3.5px solid #fff; color:#fff;
+               display:flex; align-items:center; justify-content:center;
+               font-weight:700; font-size:19px;
+               border-radius:38% 62% 55% 45% / 55% 45% 62% 38%;
+               box-shadow:0 3px 0 rgba(0,60,110,.35);
+               text-shadow:0 2px 0 rgba(0,0,0,.2); transform:rotate(-6deg); }
+  .pill { position:relative; flex:1; height:34px; background:#fff; border-radius:20px;
+          display:flex; align-items:center; padding-left:32px;
+          font-weight:600; font-size:14.5px; color:#4A3B2A;
+          box-shadow:0 3px 0 rgba(0,60,110,.22); }
+  .pill .icon { position:absolute; left:-6px; top:50%; transform:translateY(-50%);
+                width:32px; height:32px; border-radius:50%;
+                display:flex; align-items:center; justify-content:center; font-size:16px; }
+  .icon.coin { background:radial-gradient(circle at 35% 30%,#FFE28A 0%,#FFC93C 55%,#F0A420 100%);
+               border:2.5px solid #E08E00; box-shadow:0 2px 0 rgba(0,60,110,.25); }
+  .icon.coin::after { content:""; width:14px; height:14px; border-radius:50%;
+                      border:3px solid #E08E00; opacity:.55; }
+  .icon.gem { background:none; border:none; box-shadow:none; }
+  .icon.gem::before { content:""; position:absolute; inset:3px;
+                      background:linear-gradient(135deg,#E08CFF 0%,#B05CE3 55%,#7E2FBF 100%);
+                      clip-path:polygon(50% 0%,100% 35%,78% 100%,22% 100%,0% 35%);
+                      border-radius:4px; }
+  .icon.energy { background:radial-gradient(circle at 35% 30%,#FFB03A 0%,#F08A1D 70%);
+                 border:2.5px solid #C96A00; box-shadow:0 2px 0 rgba(0,60,110,.25); }
+  .icon.energy::after { content:""; position:absolute; width:10px; height:16px;
+                        background:#FFF3D6; clip-path:polygon(60% 0,20% 55%,45% 55%,40% 100%,80% 42%,55% 42%); }
+  .plus { position:absolute; top:-7px; right:-4px; width:19px; height:19px;
+          background:linear-gradient(180deg,#8FE05C,#4CAF2E); border:2.5px solid #fff;
+          border-radius:50%; color:#fff; font-weight:700; font-size:13px;
+          display:flex; align-items:center; justify-content:center; line-height:1;
+          box-shadow:0 2px 0 rgba(0,60,110,.25); }
+  .menu-btn { flex:none; width:46px; height:46px; border-radius:16px;
+              background:linear-gradient(180deg,#FFB53E 0%,#FF8A3D 100%);
+              border:3px solid #fff; box-shadow:0 4px 0 #D96A1E, 0 6px 8px rgba(0,60,110,.3);
+              display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; }
+  .menu-btn span { width:20px; height:4px; border-radius:3px; background:#fff; }
+
+  /* ---- level progress ---- */
+  .progress-wrap { position:absolute; top:70px; left:0; right:0;
+                   display:flex; flex-direction:column; align-items:center; }
+  .progress-label { color:#fff; font-weight:700; font-size:12px; letter-spacing:1px;
+                    text-shadow:0 2px 0 rgba(0,80,140,.4); margin-bottom:3px; }
+  .progress-row { display:flex; align-items:center; gap:8px; }
+  .progress-bar { position:relative; width:210px; height:22px; border-radius:14px;
+                  background:#1668A8; border:3px solid #fff;
+                  box-shadow:0 3px 0 rgba(0,60,110,.3); overflow:hidden; }
+  .progress-fill { height:100%; width:68%; border-radius:10px;
+                   background:linear-gradient(180deg,#FFE066 0%,#FFC93C 60%,#F5A623 100%); }
+  .progress-text { position:absolute; inset:0; display:flex; align-items:center;
+                   justify-content:center; color:#fff; font-weight:700; font-size:12.5px;
+                   text-shadow:0 1.5px 0 rgba(120,70,0,.55); }
+  .reward { display:flex; align-items:center; gap:3px; color:#fff; font-weight:700;
+            font-size:13px; text-shadow:0 2px 0 rgba(0,80,140,.4); }
+  .reward .gem-ico { width:18px; height:18px;
+                     background:linear-gradient(135deg,#E08CFF,#8E3AD1);
+                     clip-path:polygon(50% 0%,100% 35%,78% 100%,22% 100%,0% 35%); }
+  .reward .chest { width:30px; height:26px; border-radius:6px;
+                   background:linear-gradient(180deg,#FF9A3D 0 45%,#C96A2E 45% 100%);
+                   border:2.5px solid #8A4415; position:relative; }
+  .reward .chest::after { content:""; position:absolute; left:50%; top:38%;
+                          transform:translateX(-50%); width:7px; height:7px;
+                          border-radius:2px; background:#FFE066; border:1.5px solid #8A4415; }
+
+  /* ---- build cards ---- */
+  .cards { position:absolute; bottom:112px; left:0; right:0;
+           display:flex; justify-content:center; gap:10px; }
+  .card { width:106px; background:#fff; border-radius:20px; padding:10px 10px 12px;
+          display:flex; flex-direction:column; align-items:center; gap:8px;
+          box-shadow:0 5px 0 rgba(0,60,110,.25); }
+  .card .art { width:74px; height:58px; border-radius:14px;
+               display:flex; align-items:center; justify-content:center; font-size:34px;
+               background:linear-gradient(180deg,#B9ECFF 0%,#7ED4F7 100%); }
+  .price { display:flex; align-items:center; gap:5px; height:26px; padding:0 12px 0 6px;
+           border-radius:15px; background:linear-gradient(180deg,#8FE05C,#4CAF2E);
+           box-shadow:0 3px 0 #37901D; color:#fff; font-weight:700; font-size:13.5px;
+           text-shadow:0 1.5px 0 rgba(0,80,0,.3); }
+  .price .mini-coin { width:17px; height:17px; border-radius:50%;
+                      background:radial-gradient(circle at 35% 30%,#FFE28A,#F0A420);
+                      border:2px solid #E08E00; }
+  .card.done .price { background:linear-gradient(180deg,#8FE05C,#4CAF2E); padding:0 12px; }
+  .check { width:17px; height:17px; }
+  .check path { stroke:#fff; stroke-width:3.2; fill:none; stroke-linecap:round; stroke-linejoin:round; }
+
+  /* ---- CTA ---- */
+  .cta { position:absolute; bottom:26px; left:50%; transform:translateX(-50%);
+         width:74px; height:74px; border-radius:50%;
+         background:linear-gradient(180deg,#8FE05C 0%,#4CAF2E 100%);
+         border:4px solid #fff; box-shadow:0 6px 0 #37901D, 0 10px 14px rgba(0,60,110,.35);
+         display:flex; align-items:center; justify-content:center; }
+  .cta svg { width:34px; height:34px; }
+  .cta path { fill:#fff; }
+</style>
+</head>
+<body>
+  <div class="sun-glow"></div>
+  <div class="island green"></div>
+  <div class="island dock"></div>
+  <div class="wave" style="top:120px; left:34px;"></div>
+  <div class="wave" style="top:150px; right:40px; transform:scale(.7);"></div>
+  <div class="wave" style="top:430px; left:60px; transform:scale(.8);"></div>
+
+  <div class="topbar">
+    <div class="lvl-badge">99</div>
+    <div class="pill"><div class="icon coin"></div>999,999,999<div class="plus">+</div></div>
+    <div class="pill"><div class="icon gem"></div>99,999<div class="plus">+</div></div>
+    <div class="pill" style="flex:.7"><div class="icon energy"></div>1/3<div class="plus">+</div></div>
+    <div class="menu-btn"><span></span><span></span><span></span></div>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-label">LEVEL PROGRESS</div>
+    <div class="progress-row">
+      <div class="progress-bar">
+        <div class="progress-fill"></div>
+        <div class="progress-text">68%</div>
+      </div>
+      <div class="reward"><div class="gem-ico"></div>250<div class="chest"></div></div>
+    </div>
+  </div>
+
+  <div class="cards">
+    <div class="card"><div class="art">🥨</div><div class="price"><div class="mini-coin"></div>9999</div></div>
+    <div class="card"><div class="art">🍢</div><div class="price"><div class="mini-coin"></div>9999</div></div>
+    <div class="card done"><div class="art">🪵</div><div class="price"><svg class="check" viewBox="0 0 24 24"><path d="M4 13l5 5L20 7"/></svg></div></div>
+  </div>
+
+  <div class="cta"><svg viewBox="0 0 24 24"><path d="M8 4l9 8-9 8V4z"/></svg></div>
+</body>
+</html>

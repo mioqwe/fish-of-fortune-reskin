@@ -1,0 +1,28 @@
+CHARACTER MODEL — prompts & workflow (Part 2 placeholder)
+=========================================================
+
+Intended pipeline: 2D concept -> 3D conversion -> rig (Mixamo) -> dance animation -> character.glb
+
+2D concept prompt (image gen):
+  "Cute chibi humanoid character for a casual mobile game, big head,
+   small body, coral-pink shirt, blue shorts, friendly smile, simple
+   rounded shapes, T-pose, full body, flat background, game asset concept art"
+
+3D conversion: Meshy / Tripo AI image-to-3D (T-pose), Blender cleanup.
+
+Rigging & animation:
+  - Upload to Mixamo (mixamo.com), auto-rig
+  - Apply a dance animation (e.g. "Silly Dancing" / "Hip Hop Dancing")
+  - Download as FBX/GLB with skin + animation clip embedded
+
+Optimization targets:
+  - < 5,000 triangles, humanoid skeleton
+  - single 512x512 texture
+  - one animation clip, baked, exported inside the GLB
+
+Integration notes:
+  - The game loads 'glb/character/character.glb' via GLTFLoader, auto-fits it to
+    ~1.8 world units and plays animations[0] through an AnimationMixer on the
+    floating rock (left side).
+  - Until this file exists, a procedural low-poly fallback character performs a
+    code-driven dance (arm waves + bounce).

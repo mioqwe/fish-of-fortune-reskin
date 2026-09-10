@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lane Runner Game</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            font-family: Arial, sans-serif;
+        }
+        
+        #game-container {
+            position: relative;
+        }
+        
+        canvas {
+            border: 2px solid #333;
+            background-color: #fff;
+        }
+        
+        #game-stats {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 18px;
+            font-weight: bold;
+        }
+        
+        #game-over, #game-win {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            display: none;
+        }
+        
+        button {
+            margin-top: 10px;
+            padding: 8px 16px;
+            font-size: 16px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="gameCanvas" width="400" height="600"></canvas>
+        <div id="game-stats">Coins: 0 | Lives: 3</div>
+        <div id="game-over">
+            Game Over!
+            <br>
+            <button id="restart-button">Play Again</button>
+        </div>
+        <div id="game-win">
+            You Win!
+            <br>
+            <button id="play-again-button">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        // Game variables
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const gameStats = document.getElementById('game-stats');
+        const gameOverScreen = document.getElementById('game-over');
+        const gameWinScreen = document.getElementById('game-win');
+        const restartButton = document.getElementById('restart-button');
+        const playAgainButton = document.getElementById('play-again-button');
+        
+        // Game settings
+        const laneCount = 5;
+        const laneWidth = canvas.width / laneCount;
+        const playerSize = 30;
+        const objectSize = 20;
+        const playerY = canvas.height - playerSize - 10;
+        let playerLane = Math.floor(laneCount / 2);
+        let coins = 0;
+        let lives = 3;
+        let gameRunning = true;
+        
+        // Arrays to store game objects
+        let fallingObjects = [];
+        
+        // Object types
+        const OBJECT_TYPES = {
+            COIN: { value: 1, color: 'yellow', shape: 'circle' },
+            GEM: { value: 10, color: 'purple', shape: 'diamond' },
+            OBSTACLE: { value: 0, color: 'red', shape: 'x' }
+        };
+        
+        // Initialize the game
+        function init() {
+            coins = 0;
+            lives = 3;
+            fallingObjects = [];
+            playerLane = Math.floor(laneCount / 2);
+            gameRunning = true;
+            gameOverScreen.style.display = 'none';
+            gameWinScreen.style.display = 'none';
+            updateStats();
+        }
+        
+        // Move player left or right
+        function movePlayer(direction) {
+            if (!gameRunning) return;
+            
+            if (direction === 'left' && playerLane > 0) {
+                playerLane--;
+            } else if (direction === 'right' && playerLane < laneCount - 1) {
+                playerLane++;
+            }
+        }
+        
+        // Add a new falling object
+        function addFallingObject() {
+            if (!gameRunning) return;
+            
+            const lane = Math.floor(Math.random() * laneCount);
+            
+            // Use weighted probabilities to make gems rare
+            const rand = Math.random();
+            let type;
+            
+            if (rand < 0.15) {
+                // 15% chance for gems (rare)
+                type = OBJECT_TYPES.GEM;
+            } else if (rand < 0.60) {
+                // 45% chance for coins
+                type = OBJECT_TYPES.COIN;
+            } else {
+                // 40% chance for obstacles
+                type = OBJECT_TYPES.OBSTACLE;
+            }
+            
+            fallingObjects.push({
+                lane: lane,
+                y: -objectSize,
+                type: type,
+                speed: 2 + Math.random() * 2  // Random speed between 2 and 4
+            });
+        }
+        
+        // Update all game objects
+        function update() {
+            if (!gameRunning) return;
+            
+            // Update falling objects
+            for (let i = fallingObjects.length - 1; i >= 0; i--) {
+                const obj = fallingObjects[i];
+                obj.y += obj.speed;
+                
+                // Check if object is out of bounds
+                if (obj.y > canvas.height) {
+                    fallingObjects.splice(i, 1);
+                    continue;
+                }
+                
+                // Check collision with player
+                const playerX = playerLane * laneWidth + laneWidth / 2;
+                const objX = obj.lane * laneWidth + laneWidth / 2;
+                
+                const distance = Math.sqrt(
+                    Math.pow(playerX - objX, 2) + 
+                    Math.pow(playerY - obj.y, 2)
+                );
+                
+                if (distance < (playerSize + objectSize) / 2) {
+                    // Collision detected
+                    if (obj.type === OBJECT_TYPES.OBSTACLE) {
+                        lives--;
+                        updateStats();
+                        if (lives <= 0) {
+                            gameOver();
+                        }
+                    } else {
+                        coins += obj.type.value;
+                        updateStats();
+                        if (coins >= 100) {
+                            gameWin();
+                        }
+                    }
+                    fallingObjects.splice(i, 1);
+                }
+            }
+            
+            // Randomly add new objects
+            if (Math.random() < 0.02) {  // 2% chance each frame
+                addFallingObject();
+            }
+        }
+        
+        // Draw everything on canvas
+        function draw() {
+            // Clear canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw lanes (faint lines)
+            ctx.strokeStyle = '#ddd';
+            ctx.lineWidth = 1;
+            for (let i = 1; i < laneCount; i++) {
+                const x = i * laneWidth;
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            
+            // Draw player (blue box)
+            ctx.fillStyle = 'blue';
+            const playerX = playerLane * laneWidth + (laneWidth - playerSize) / 2;
+            ctx.fillRect(playerX, playerY, playerSize, playerSize);
+            
+            // Draw falling objects
+            for (const obj of fallingObjects) {
+                const objX = obj.lane * laneWidth + laneWidth / 2;
+                
+                ctx.fillStyle = obj.type.color;
+                
+                if (obj.type.shape === 'circle') {
+                    // Draw coin (yellow circle)
+                    ctx.beginPath();
+                    ctx.arc(objX, obj.y, objectSize / 2, 0, Math.PI * 2);
+                    ctx.fill();
+                } else if (obj.type.shape === 'diamond') {
+                    // Draw gem (purple diamond)
+                    ctx.beginPath();
+                    ctx.moveTo(objX, obj.y - objectSize / 2);
+                    ctx.lineTo(objX + objectSize / 2, obj.y);
+                    ctx.lineTo(objX, obj.y + objectSize / 2);
+                    ctx.lineTo(objX - objectSize / 2, obj.y);
+                    ctx.closePath();
+                    ctx.fill();
+                } else if (obj.type.shape === 'x') {
+                    // Draw obstacle (red X)
+                    ctx.lineWidth = 3;
+                    ctx.strokeStyle = obj.type.color;
+                    const size = objectSize / 2;
+                    ctx.beginPath();
+                    ctx.moveTo(objX - size, obj.y - size);
+                    ctx.lineTo(objX + size, obj.y + size);
+                    ctx.moveTo(objX + size, obj.y - size);
+                    ctx.lineTo(objX - size, obj.y + size);
+                    ctx.stroke();
+                }
+            }
+        }
+        
+        // Game loop
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+        
+        // Update statistics display
+        function updateStats() {
+            gameStats.innerText = `Coins: ${coins} | Lives: ${lives}`;
+        }
+        
+        // Game over
+        function gameOver() {
+            gameRunning = false;
+            gameOverScreen.style.display = 'block';
+        }
+        
+        // Game win
+        function gameWin() {
+            gameRunning = false;
+            gameWinScreen.style.display = 'block';
+        }
+        
+        // Event listeners
+        document.addEventListener('keydown', (e) => {
+            // Arrow keys
+            if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') {
+                movePlayer('left');
+            } else if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') {
+                movePlayer('right');
+            }
+        });
+        
+        restartButton.addEventListener('click', init);
+        playAgainButton.addEventListener('click', init);
+        
+        // Start the game
+        init();
+        gameLoop();
+    </script>
+</body>
+</html>

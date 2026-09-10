@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>FoF — UI Elements Sheet</title>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:'Fredoka',sans-serif; }
+  body { width:390px; padding:18px 16px 26px; background:linear-gradient(180deg,#3FC6F0,#1B9CD8); }
+  h2 { color:#fff; font-weight:700; font-size:15px; letter-spacing:1.5px;
+       text-shadow:0 2px 0 rgba(0,80,140,.4); margin:16px 0 8px; }
+  .row { display:flex; align-items:center; gap:14px; flex-wrap:wrap; }
+
+  .btn { border:none; cursor:pointer; font-weight:700; color:#fff;
+         border-radius:18px; border:3px solid #fff;
+         padding:10px 26px; font-size:17px; letter-spacing:.5px;
+         text-shadow:0 2px 0 rgba(0,80,0,.3); }
+  .btn.green  { background:linear-gradient(180deg,#8FE05C,#4CAF2E); box-shadow:0 5px 0 #37901D,0 8px 10px rgba(0,60,110,.3); }
+  .btn.orange { background:linear-gradient(180deg,#FFB53E,#FF8A3D); box-shadow:0 5px 0 #D96A1E,0 8px 10px rgba(0,60,110,.3); text-shadow:0 2px 0 rgba(140,60,0,.3); }
+  .btn.blue   { background:linear-gradient(180deg,#5FD3F7,#2E9BDF); box-shadow:0 5px 0 #1B76B0,0 8px 10px rgba(0,60,110,.3); text-shadow:0 2px 0 rgba(0,70,120,.3); }
+  .btn.pink   { background:linear-gradient(180deg,#FF8FC7,#F25CA2); box-shadow:0 5px 0 #C93B82,0 8px 10px rgba(0,60,110,.3); text-shadow:0 2px 0 rgba(140,20,80,.3); }
+
+  .circle-btn { width:56px; height:56px; border-radius:50%; border:4px solid #fff;
+                display:flex; align-items:center; justify-content:center; }
+  .circle-btn.green { background:linear-gradient(180deg,#8FE05C,#4CAF2E); box-shadow:0 5px 0 #37901D; }
+  .circle-btn.red   { background:linear-gradient(180deg,#FF7B7B,#E23A3A); box-shadow:0 5px 0 #B02020; }
+  .circle-btn svg { width:26px; height:26px; }
+  .circle-btn path { fill:#fff; }
+  .circle-btn.red path { fill:none; stroke:#fff; stroke-width:4; stroke-linecap:round; }
+
+  .menu-btn { width:46px; height:46px; border-radius:16px;
+              background:linear-gradient(180deg,#FFB53E,#FF8A3D);
+              border:3px solid #fff; box-shadow:0 4px 0 #D96A1E;
+              display:flex; flex-direction:column; align-items:center; justify-content:center; gap:4px; }
+  .menu-btn span { width:20px; height:4px; border-radius:3px; background:#fff; }
+
+  .lvl-badge { width:44px; height:44px; background:#2E9BDF; border:3.5px solid #fff; color:#fff;
+               display:flex; align-items:center; justify-content:center;
+               font-weight:700; font-size:19px;
+               border-radius:38% 62% 55% 45% / 55% 45% 62% 38%;
+               box-shadow:0 3px 0 rgba(0,60,110,.35); text-shadow:0 2px 0 rgba(0,0,0,.2);
+               transform:rotate(-6deg); }
+  .plus { width:22px; height:22px; background:linear-gradient(180deg,#8FE05C,#4CAF2E);
+          border:2.5px solid #fff; border-radius:50%; color:#fff; font-weight:700; font-size:14px;
+          display:flex; align-items:center; justify-content:center;
+          box-shadow:0 2px 0 rgba(0,60,110,.25); }
+
+  .pill { position:relative; height:34px; background:#fff; border-radius:20px;
+          display:flex; align-items:center; padding:0 14px 0 34px;
+          font-weight:600; font-size:14.5px; color:#4A3B2A;
+          box-shadow:0 3px 0 rgba(0,60,110,.22); }
+  .pill .icon { position:absolute; left:-4px; top:50%; transform:translateY(-50%);
+                width:32px; height:32px; border-radius:50%; }
+  .icon.coin { background:radial-gradient(circle at 35% 30%,#FFE28A 0%,#FFC93C 55%,#F0A420 100%);
+               border:2.5px solid #E08E00; box-shadow:0 2px 0 rgba(0,60,110,.25); }
+  .icon.gem::before { content:""; position:absolute; inset:3px;
+                      background:linear-gradient(135deg,#E08CFF,#B05CE3 55%,#7E2FBF);
+                      clip-path:polygon(50% 0%,100% 35%,78% 100%,22% 100%,0% 35%); }
+  .icon.energy { background:radial-gradient(circle at 35% 30%,#FFB03A,#F08A1D 70%);
+                 border:2.5px solid #C96A00; }
+  .icon.energy::after { content:""; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%);
+                        width:10px; height:16px; background:#FFF3D6;
+                        clip-path:polygon(60% 0,20% 55%,45% 55%,40% 100%,80% 42%,55% 42%); }
+
+  .timer { padding:4px 16px; border-radius:16px; background:#3B3B6B; color:#fff;
+           font-weight:600; font-size:15px; letter-spacing:1px;
+           box-shadow:0 3px 0 rgba(0,30,80,.3); }
+
+  .progress-bar { position:relative; width:220px; height:22px; border-radius:14px;
+                  background:#1668A8; border:3px solid #fff;
+                  box-shadow:0 3px 0 rgba(0,60,110,.3); overflow:hidden; }
+  .progress-fill { height:100%; width:68%; border-radius:10px;
+                   background:linear-gradient(180deg,#FFE066,#FFC93C 60%,#F5A623); }
+  .progress-text { position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+                   color:#fff; font-weight:700; font-size:12.5px;
+                   text-shadow:0 1.5px 0 rgba(120,70,0,.55); }
+
+  .price { display:inline-flex; align-items:center; gap:5px; height:28px; padding:0 14px 0 7px;
+           border-radius:15px; background:linear-gradient(180deg,#8FE05C,#4CAF2E);
+           box-shadow:0 3px 0 #37901D; color:#fff; font-weight:700; font-size:14px;
+           text-shadow:0 1.5px 0 rgba(0,80,0,.3); }
+  .mini-coin { width:17px; height:17px; border-radius:50%;
+               background:radial-gradient(circle at 35% 30%,#FFE28A,#F0A420);
+               border:2px solid #E08E00; }
+
+  .ribbon { display:inline-block; padding:3px 12px; transform:rotate(4deg);
+            background:linear-gradient(180deg,#FF6B6B,#E23A3A); color:#fff;
+            font-weight:700; font-size:12px; border-radius:6px 6px 6px 0;
+            box-shadow:0 2px 0 #B02020; }
+
+  .fcard { width:112px; background:#fff; border-radius:18px; padding:6px 6px 0;
+           box-shadow:0 4px 0 rgba(0,60,110,.25); }
+  .fcard .art { height:72px; border-radius:13px; display:flex; align-items:center;
+                justify-content:center; font-size:36px;
+                background:linear-gradient(180deg,#3FC6F0,#1B9CD8); }
+  .fcard .stars { text-align:center; font-size:13px; padding:3px 0 2px;
+                  color:#FFC93C; text-shadow:0 1px 0 #E08E00; }
+  .fcard .foot { display:flex; align-items:center; gap:6px; padding:0 2px 8px; }
+  .fcard .lvl { flex:none; width:24px; height:24px; border-radius:50%;
+                background:linear-gradient(180deg,#5FD3F7,#1B9CD8);
+                border:2.5px solid #fff; box-shadow:0 2px 0 rgba(0,80,140,.35);
+                color:#fff; font-weight:700; font-size:13px;
+                display:flex; align-items:center; justify-content:center; }
+  .fcard .count { flex:1; height:20px; border-radius:12px; overflow:hidden; display:flex;
+                  font-weight:700; font-size:12px; }
+  .fcard .count b { flex:1.4; background:#fff; color:#4A3B2A;
+                    display:flex; align-items:center; justify-content:center; }
+  .fcard .count i { flex:1; background:#F5A623; }
+
+  .title-demo { font-weight:700; font-size:34px; letter-spacing:1px; color:#F25CA2;
+                -webkit-text-stroke:2px #fff; text-shadow:0 3px 0 #C93B82; }
+  .stars-row { color:#FFC93C; font-size:22px; letter-spacing:3px;
+               text-shadow:0 2px 0 #E08E00; }
+</style>
+</head>
+<body>
+  <h2>BUTTONS</h2>
+  <div class="row">
+    <button class="btn green">PLAY</button>
+    <button class="btn orange">SPIN</button>
+    <button class="btn blue">OK</button>
+    <button class="btn pink">SHOP</button>
+  </div>
+
+  <h2>ICON / ROUND BUTTONS</h2>
+  <div class="row">
+    <div class="circle-btn green"><svg viewBox="0 0 24 24"><path d="M8 4l9 8-9 8V4z"/></svg></div>
+    <div class="circle-btn red"><svg viewBox="0 0 24 24"><path d="M5 5l14 14M19 5L5 19"/></svg></div>
+    <div class="menu-btn"><span></span><span></span><span></span></div>
+    <div class="lvl-badge">99</div>
+    <div class="plus">+</div>
+  </div>
+
+  <h2>CURRENCY PILLS</h2>
+  <div class="row">
+    <div class="pill"><div class="icon coin"></div>999,999,999</div>
+    <div class="pill"><div class="icon gem"></div>99,999</div>
+    <div class="pill"><div class="icon energy"></div>1/3</div>
+  </div>
+
+  <h2>PROGRESS / TIMERS</h2>
+  <div class="row">
+    <div class="progress-bar"><div class="progress-fill"></div><div class="progress-text">68%</div></div>
+    <div class="timer">10:10:10</div>
+  </div>
+
+  <h2>PRICE TAGS / RIBBONS / STARS</h2>
+  <div class="row">
+    <div class="price"><div class="mini-coin"></div>9999</div>
+    <div class="ribbon">NEW</div>
+    <div class="stars-row">★★★</div>
+  </div>
+
+  <h2>COLLECTION CARD</h2>
+  <div class="row">
+    <div class="fcard"><div class="art">🐠</div><div class="stars">★★</div>
+      <div class="foot"><div class="lvl">1</div><div class="count"><b>20/25</b><i></i></div></div></div>
+    <div class="fcard"><div class="art">🐙</div><div class="stars">★</div>
+      <div class="foot"><div class="lvl">3</div><div class="count"><b>7/25</b><i></i></div></div></div>
+  </div>
+
+  <h2>SCREEN TITLE</h2>
+  <div class="row"><div class="title-demo">FISH COLLECTION</div></div>
+</body>
+</html>

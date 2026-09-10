@@ -1,0 +1,23 @@
+FARM HOUSE MODEL — prompts & workflow (Part 2 placeholder)
+==========================================================
+
+Intended pipeline: 2D concept (gen-AI image) -> 3D conversion -> optimization -> farm-house.glb
+
+2D concept prompt (image gen):
+  "Cozy cartoon farm house in the style of Klondike Adventure commercials,
+   cream plaster walls, warm red pitched roof, wooden door, small round
+   windows, stone chimney, chunky exaggerated proportions, hand-painted
+   look, bright cheerful colors, isometric 3/4 view, game asset concept art"
+
+3D conversion: Meshy / Tripo AI image-to-3D, then Blender cleanup + retopo.
+
+Optimization targets:
+  - < 3,000 triangles
+  - single 512x512 texture atlas
+  - exported as GLB, compressed
+  - origin at ground center
+
+Integration notes:
+  - The game loads 'glb/farm-house/farm-house.glb' via GLTFLoader, auto-fits it
+    to ~2.2 world units and places it on the floating sand island (right side).
+  - Until this file exists, a procedural low-poly fallback house is rendered.

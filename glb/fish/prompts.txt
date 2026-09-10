@@ -1,0 +1,23 @@
+FISH MODEL — prompts & workflow (Part 2 placeholder)
+=====================================================
+
+Intended pipeline: 2D concept (gen-AI image) -> 3D conversion -> optimization -> fish.glb
+
+2D concept prompt (image gen, e.g. DALL-E / Midjourney / SD):
+  "Cute cartoon orange fish mascot for a casual mobile fishing game
+   'Fish of Fortune', big sparkly eyes, chubby round body, small fins,
+   cream-white belly, chunky toy-like proportions, soft studio lighting,
+   flat pastel background, front-side 3/4 view, game asset concept art"
+
+3D conversion: Meshy / Tripo AI / Luma Genie image-to-3D, then Blender cleanup.
+
+Optimization targets:
+  - < 2,000 triangles
+  - single 256x256 texture (or vertex colors, no texture)
+  - exported as GLB, Draco/meshopt compressed if possible
+  - pivot at body center, nose pointing +Z
+
+Integration notes:
+  - The game (index.html) loads this file via GLTFLoader at 'glb/fish/fish.glb'
+    and auto-fits it to ~1.3 world units, replacing the procedural placeholder fish.
+  - Until this file exists, a procedural low-poly fallback fish is rendered.

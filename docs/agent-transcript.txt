@@ -1,0 +1,242 @@
+CODING AGENT TRANSCRIPT — Fish of Fortune reskin
+Tool: opencode CLI (model: kimi-for-coding/k3)
+Date: 2026-08-21
+================================================================================
+
+TASK 1 (user prompt)
+  "start implementing this game. @AGENTS.md @Game.html @DESIGN.md"
+  Context files: AGENTS.md (technical rules), Game.html (base lane-runner),
+  DESIGN.md (Fish of Fortune UI/UX guidelines + recreated mockup screenshots).
+
+AGENT PLAN (summarized)
+  1. Inspect repo, DESIGN.md and mockup screenshots (design/screenshots).
+  2. Generate compressed WebP sprite icons locally (Python/Pillow, 4x
+     supersampled) — coin, gem, bolt, chest, stars, lock, 6 collection
+     creatures, 3 boosters, 3 build items, locked silhouette.
+  3. Bundle Fredoka variable font locally (Google Fonts OFL, 30KB woff2).
+  4. Build index.html: Three.js 3D underwater lane-runner (player fish,
+     coins/gems/urchins, bubbles, light rays, seaweed, corals, background
+     fish, farm house on floating island, dancing character on floating rock)
+     + Tailwind DOM HUD per DESIGN.md (top bar pills, level progress,
+     build cards, CTA, start/game-over/win panels, Fish Collection overlay).
+  5. GLTFLoader integration for glb/*.glb with procedural fallbacks
+     (file:// fetch fails by design; game must double-click run).
+  6. Validate: node --check on extracted module; headless-Chrome screenshots
+     at 390x844 of start / gameplay / collection / win / game-over screens.
+
+KEY DECISIONS RECORDED
+  - Inline single <script type="module"> instead of js/ module files, because
+    file:// blocks ES-module imports via CORS and the Definition of Done
+    requires double-click execution. Documented in README.txt.
+  - Inline tailwind.config for custom keyframes (CTA pulse, wave, shake,
+    pop-in, float); custom CSS limited to @font-face, title text-stroke,
+    scrollbar hiding.
+  - WebAudio synthesized SFX instead of audio files (zero bytes, always
+    available offline).
+
+FOLLOW-UP FIXES (same session, screenshot-driven QA)
+  - Replaced arrow glyphs unsupported by Fredoka with text hint.
+  - Raised player catch line (PLAYER_Y -4.4 -> -2.6) after headless
+    screenshots showed the fish hidden behind build cards.
+  - Moved farm house and character onto floating islands at mid-depth so
+    they are visible above the bottom UI zone.
+  - Scaled player to 0.85 for better catch margins.
+  - Added hash test hooks (#play, #collection, #win, #over) for automated
+    visual verification.
+
+RESULT
+  All five screens verified rendering correctly via headless Chrome.
+  node --check passes on the embedded module. Game folder is self-contained
+  except the two allowed CDN libraries.
+
+TASK 2 (user prompt)
+  "change coints to match this style: [reference image: chunky gold coin
+   with thick orange rim and embossed star with coral-red shadow]"
+  -> Rewrote the coin icon generator (gradient rim/face, inner ring,
+     specular arc, star with coral drop shadow); moved the generator into
+     assets/src/gen_icons.py as a permanent source file.
+  -> 3D coin: added extruded gold star + coral shadow layer on both faces,
+     thicker rim torus (index.html makeCoin). Verified via screenshots.
+
+TASK 3 (user prompt)
+  "we should collect coins, death should decrease coins counter by exponent
+   - each game should take 20 coins to play, initialy player should have
+   100 coins. player can buy: 1. shield for his fish (metal armor, gives
+   +1 health for next mine, then breaks). 2. user should be asked to use
+   energy when he has not enough coins to play."
+  -> Persistent wallet (localStorage, starts at 100 coins), 20-coin entry
+     fee per game, exponential urchin tax 5*2^n per run with floating
+     "-N" feedback and game-over summary.
+  -> Shield shop card (25 coins) + procedural metal armor on the fish
+     (helmet dome, bands, rivets); absorbs one hit, breaks with clang.
+  -> Energy-for-entry dialog ("NOT ENOUGH COINS! Use 1 energy") with
+     out-of-energy variant; energy regenerates 1/45s up to 3; energy "+"
+     costs 10 gems.
+  -> New test hook index.html#broke / #shield; verified with headless
+     screenshots (wallet, dialog, armored fish, owned card state).
+
+TASK 4 (user prompt)
+  "add to 'Out of energy' modal a button that adds +1 energy — small green
+   +1 button near Cancel, grid 3 parts Cancel / 1 part +1"
+  -> Dialog bottom row is now grid-cols-4: blue Cancel (col-span-3) + green
+     +1 energy top-up (capped at 3). Verified via screenshot.
+
+TASK 5 (user prompt)
+  "energy is just currency to buy new runs — set initial health for each
+   run to 3 for the fish"
+  -> Decoupled energy from health: energy is now purely the meta-currency
+     for buying runs (20 coins OR 1 energy per run). Added per-run `health`
+     (3 hearts) with a heart icon row under the level progress bar; hearts
+     grey out on urchin hits, 0 hearts = game over. New heart.webp icon.
+
+TASK 6 (user prompt)
+  "remove levels, game should be infinite; add portals looking like an
+   oxygen explosion under water, at the edges of the screen, sliding
+   top-to-bottom so the player can skip or enter; entering teleports to
+   another location (change background color + slide effect)"
+  -> Removed level badge/progress bar/win condition; HUD shows SCORE and
+     hearts; infinite difficulty ramp (spawn rate + speed vs run time).
+  -> Portal = additive bubble plume (14 jittering core spheres + 50 swirling
+     bubble Points, pulsing/churning), spawns every 14-22 s at the left or
+     right screen edge, falls at fixed speed; dodge or enter (outer lane).
+  -> Teleport: rAF-driven 2-phase slide — camera pans out + bubble-gradient
+     DOM wipe covers the screen, mid-point swaps location (4 gradient
+     palettes for scene.background + fog), clears the field, then slides
+     back in. CSS transitions avoided (unreliable under virtual time) —
+     wipe is driven from the same rAF loop as the camera.
+  -> Test hooks: #portal, #warp, #loc1..3; verified via headless
+     screenshots (portal plume, synced slide, purple/deep-sea locations).
+
+TASK 7 (user prompt)
+  "make those portals different: 3 types of portals / 3 types of levels —
+   1. purple: all coins replaced with diamonds
+   2. red: speed 3x up, no coins/diamonds, faster + more bombs, exiting
+      restores all energy
+   3. golden: only coins; player forced out after collecting a set amount
+      of coins by a top waterfall"
+  -> PORTAL_TYPES map (purple/red/gold/home) drives plume colors and
+     destination. Base level spawns random colored portals; special levels
+     spawn white "home" portals.
+  -> Per-level spawn tables in updateGame: purple = gems/urchins only,
+     red = urchins only at 3x fall speed + higher spawn rate, gold = coins
+     only with GOLD_QUOTA=15 (HUD shows GOLD n/15).
+  -> Exiting red restores energy to 3/3 with a floating "ENERGY FULL!" note.
+  -> Gold quota triggers startWaterfall(): translucent cascade planes flush
+     down from the top with bubble bursts + shake, then force-teleports
+     back to the base ocean.
+  -> New hooks #falls, updated #locN to set level state; verified red,
+     gold and waterfall screenshots.
+
+TASK 8 (user prompt)
+  "portal bubbles all look the same blue"
+  -> Additive blending washed tints out over cyan water. Gave each portal
+     type a colored radial glow-sprite core and switched bubbles to normal
+     blending with saturated per-type colors. Hooks: #portal-<type>.
+
+TASK 9 (user prompt)
+  "fix golden waterfall particles — looks like 3 lines from the top"
+  -> Replaced plane stripes with: full-width descending water curtain with
+     vertex-animated wavy bottom edge + 10 pulsing foam-crest sprites +
+     160 recycling foam-rain particles. Fixed bubble texture square corners
+     (opaque rim -> proper ring with transparent edges).
+
+TASK 10 (user prompt)
+  "shop: 1. shield 2. replace flag with fish growth (1.1x, shield grows
+   too, +1 health per upgrade, cost x2 each) 3. baby fish swarm that
+   catches coins/diamonds but not bombs. Recalibrate economics, don't
+   overcomplicate."
+  -> Grow card: 30 coins x2 per level, max 5, persisted in save.growLevel;
+     player scale 0.85*1.1^n (armor is a child of the player rig so it
+     grows automatically); max health = 3+n with dynamic hearts row;
+     mid-run purchase heals +1; catch radius +0.05/level. New grow.webp.
+  -> Swarm card: 50 coins per run; 3 colored baby fish orbit the player
+     and auto-collect valuables within 0.6 units (urchins excluded);
+     cleared on restart. New swarm.webp.
+  -> Removed the old generic build-card purchases; economy: run costs 20
+     coins, typical run income 20-60, upgrades 25/30+/50, urchin tax 5/10/20,
+     energy fallback unchanged.
+  -> Hook #upg for visual verification (grown armored fish + 5 hearts +
+     swarm). Verified with real-time headless screenshot.
+
+TASK 11 (user prompt)
+  "red level too fast, less aggressive; fix bugs: 1. hearts UI doesn't
+   grey out on hits 2. play-again coin tax less aggressive 3. each next
+   shield costs x2 4. swarm = 15s active ability with timer ring around
+   the card, each next use costs x2"
+  -> Red level fall-speed multiplier 3x -> 1.8x.
+
+TASK 12 (user prompt)
+  "top bar smaller/compact, align items (especially gem & energy pills),
+   move ability buttons lower"
+  -> Compact HUD: 28px pills, unified pill structure, 18px + badges,
+     32px hamburger. Cards bottom margin dynamic: 14px while playing,
+     96px in menus (CTA clearance).
+
+TASK 13 (user prompt)
+  "hearts on top, not updating"
+  -> Root cause: an earlier edit had accidentally injected the boot calls
+     (renderHearts etc.) into the urchin-hit branch of updateGame, so every
+     hit re-rendered fresh red hearts right after greying them. Moved the
+     boot block back out; verified live hit -> 2 red + 1 grey (console +
+     screenshot).
+
+TASK 14 (user prompt)
+  "generate 6 fish types; replace collection with a gem-priced fish shop;
+   same size as main fish so the shield fits all; god (golden), devil,
+   purple diamond + 3 of your choice"
+  -> FISH_TYPES: Lucky (free), Bubble 20, Toxic 35, Diamond 60 (sparkle
+     octahedrons + emissive), Devil 80 (horns), God 150 (halo, emissive
+     gold). All are recolors of the same base model (armor fits all);
+     extras positioned in the rotated local frame (verified visually).
+  -> makePlayerFish now takes a palette and tags mesh roles; applyFish()
+     swaps materials + extras on the live player rig.
+  -> Collection overlay replaced by FISH SHOP (scalloped panel kept):
+     JS-rendered cards with gem price pills / OWNED / IN USE states;
+     ownedFish + selectedFish persisted. New fshop_*.webp icons.
+  -> Hooks: #fish-<id>; verified shop grid + god halo + devil horns.
+
+TASK 15 (user prompt)
+  "portal visuals: more bubbles, closer to screen edge so it feels like a
+   portal" -> elongated vertical plume (90 bubble points + 20 cores, taller
+   glow), pinned at x=+/-3.05 so the frame edge clips it. (First attempt at
+   +/-3.55 was fully off-screen; corrected.)
+
+TASK 16 (user prompt)
+  "add pause button near menu button — just pause, no modals, for taking
+   screenshots" -> blue pause/play toggle in the top bar; gates updateGame
+   only; icon syncs with collection pause + startGame.
+
+TASK 17 (user prompt)
+  "add background music (lower volume by default)"
+  -> Generative WebAudio loop: pentatonic triangle arpeggio + sine bass
+     progression (C-A-F-G), 92 BPM, lookahead scheduler, master gain 0.05.
+     Starts on first pointerdown/keydown (autoplay policy). No audio files.
+
+TASK 18 (user prompt)
+  "brighter colors with gradients/shading for fishes, coins, diamonds"
+  -> Fish bodies/bellies/fins use gradient canvas textures (lit-from-above),
+     brighter palettes; coins/gems brighter + stronger emissive; icons
+     regenerated with sheen + brighter gradients.
+  -> Coins made smooth (32-segment geometry, no flatShading, glossier).
+  -> UI pass: bigger UI overall, title outline via text-shadow stack,
+     keycap visuals for A/D/arrows, colored+outlined currency pills,
+     white energy bolt icon, double-tap zoom disabled
+     (touch-action manipulation + dblclick guard).
+  -> First-run guide (in-memory flags): tap-hand overlay animation +
+     portal-guide modal with the 3 provided portal screenshots.
+
+TASK 19 (user prompt)
+  "blur the game on menu open (score/hearts stack under the title);
+   guide modal: blur instead of dim; text must stay visible"
+  -> setGameBlur() applies blur(6px) + transition to canvas, score/hearts
+     (#midHud), bottom cards and wave decorations; top currency bar stays
+     sharp. Portal guide overlay switched to backdrop-blur-md (no tint).
+  -> Hearts bug root cause: dynamically toggled Tailwind classes
+     (grayscale/opacity-40) were never in initial markup so the CDN JIT
+     didn't generate them; switched updateHearts() to inline styles.
+  -> Entry fee 20 -> 10 coins; urchin tax 5*2^n -> 2*2^n.
+  -> Shield cost 25*2^shieldBuys (persisted), price label live-updates.
+  -> Swarm is now a 15 s timed ability: SVG countdown ring + seconds on
+     the card while active (ticked in updateGame), cost 50*2^swarmUses
+     (persisted), babies despawn at expiry.
+================================================================================
