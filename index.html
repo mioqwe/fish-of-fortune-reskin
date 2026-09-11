@@ -221,8 +221,6 @@ html, body { touch-action: manipulation; -webkit-tap-highlight-color: transparen
         <span class="key">D</span>
       </div>
       <p class="text-white/80 text-xs font-bold">tap screen sides on mobile</p>
-      <button id="customFishBtn" class="rounded-[14px] bg-gradient-to-b from-[#5FD3F7] to-[#2E9BDF] border-[3px] border-white shadow-[0_4px_0_#1B76B0] px-5 py-2 text-sm font-bold text-white uppercase active:translate-y-[2px] active:shadow-[0_2px_0_#1B76B0] transition" style="text-shadow:0 2px 0 rgba(0,0,0,.25)">Load custom fish .glb</button>
-      <input id="customFishInput" type="file" accept=".glb,model/gltf-binary" class="hidden">
     </div>
   </div>
 
@@ -822,19 +820,6 @@ function applyFishGLB(fish) {
     }
   }
 })();
-
-$('customFishBtn').addEventListener('click', () => { sfx.click(); $('customFishInput').click(); });
-$('customFishInput').addEventListener('change', e => {
-  const file = e.target.files[0];
-  if (!file) return;
-  const reader = new FileReader();
-  reader.onload = async () => {
-    const g = await parseGLB(reader.result);
-    if (g) { applyFishGLB(g); sfx.gem(); } else sfx.hit();
-  };
-  reader.readAsArrayBuffer(file);
-  e.target.value = '';
-});
 
 function radialTex(inner, outer) {
   const c = document.createElement('canvas'); c.width = c.height = 64;
