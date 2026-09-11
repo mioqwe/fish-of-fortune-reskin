@@ -102,7 +102,12 @@ TECHNICAL APPROACH
   - GLB integration: the loader tries glb/fish/fish.glb,
     glb/farm-house/farm-house.glb, glb/character/character.glb. On file://
     (or while the Part-2 GLBs don't exist yet) loading fails gracefully and
-    procedural low-poly fallbacks are used, so the game always runs. When the
+    procedural low-poly fallbacks are used, so the game always runs. The fish
+    GLB is also embedded as base64 in js/fish-glb-data.js (classic script,
+    since ES-module imports are also CORS-blocked on file://) and parsed via
+    GLTFLoader.parse when the fetch fails, so the real fish model shows even
+    on file://. A "Load custom fish .glb" button on the start screen lets the
+    user pick any .glb via FileReader to replace the player model. When the
     GLBs exist (served over http), they replace the fallbacks; the character's
     Mixamo clip plays via AnimationMixer (animations[0]).
   - Performance: shared/cached geometries & materials, object pools for

@@ -221,6 +221,8 @@ html, body { touch-action: manipulation; -webkit-tap-highlight-color: transparen
         <span class="key">D</span>
       </div>
       <p class="text-white/80 text-xs font-bold">tap screen sides on mobile</p>
+      <button id="customFishBtn" class="rounded-[14px] bg-gradient-to-b from-[#5FD3F7] to-[#2E9BDF] border-[3px] border-white shadow-[0_4px_0_#1B76B0] px-5 py-2 text-sm font-bold text-white uppercase active:translate-y-[2px] active:shadow-[0_2px_0_#1B76B0] transition" style="text-shadow:0 2px 0 rgba(0,0,0,.25)">Load custom fish .glb</button>
+      <input id="customFishInput" type="file" accept=".glb,model/gltf-binary" class="hidden">
     </div>
   </div>
 
@@ -325,6 +327,7 @@ html, body { touch-action: manipulation; -webkit-tap-highlight-color: transparen
 
 </div>
 
+<script src="js/fish-glb-data.js"></script>
 <script type="module">
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
@@ -765,31 +768,44 @@ function fitTo(obj, size) {
   obj.scale.multiplyScalar(s);
 }
 const gltfLoader = new GLTFLoader();
-const tryGLB = url => new Promise(res => gltfLoader.load(url, g => res(g), undefined, () => res(null)));
+const parseGLB = buffer => new Promise(res => gltfLoader.parse(buffer, '', g => res(g), () => res(null)));
+const tryGLB = async url => {
+  const g = await new Promise(res => gltfLoader.load(url, res, undefined, () => res(null)));
+  if (g) return g;
+  if (url === 'glb/fish/fish.glb' && window.FISH_GLB_BASE64) {
+    const bin = atob(window.FISH_GLB_BASE64);
+    const bytes = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return parseGLB(bytes.buffer);
+  }
+  return null;
+};
+function applyFishGLB(fish) {
+  player.userData.inner.visible = false;
+  if (player.userData.glbInner) player.remove(player.userData.glbInner);
+  fitTo(fish.scene, 1.3);
+  const gInner = new THREE.Group();
+  gInner.rotation.z = Math.PI / 2;
+  gInner.add(fish.scene);
+  player.add(gInner);
+  player.userData.glbInner = gInner;
+  const roleOf = n => /Body/.test(n) ? 'body' : /Belly/.test(n) ? 'belly' : /Fin|Stripe/.test(n) ? 'fin' : null;
+  const gm = { body: [], belly: [], fin: [] };
+  fish.scene.traverse(o => {
+    if (!o.isMesh) return;
+    (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => {
+      const r = roleOf(m.name);
+      if (r && !gm[r].includes(m)) gm[r].push(m);
+    });
+  });
+  player.userData.glbMats = gm;
+  applyFish(save.selectedFish);
+}
 (async () => {
   const [fish, house, char] = await Promise.all([
     tryGLB('glb/fish/fish.glb'), tryGLB('glb/farm-house/farm-house.glb'), tryGLB('glb/character/character.glb')
   ]);
-  if (fish) {
-    player.userData.inner.visible = false;
-    fitTo(fish.scene, 1.3);
-    const gInner = new THREE.Group();
-    gInner.rotation.z = Math.PI / 2;
-    gInner.add(fish.scene);
-    player.add(gInner);
-    player.userData.glbInner = gInner;
-    const roleOf = n => /Body/.test(n) ? 'body' : /Belly/.test(n) ? 'belly' : /Fin|Stripe/.test(n) ? 'fin' : null;
-    const gm = { body: [], belly: [], fin: [] };
-    fish.scene.traverse(o => {
-      if (!o.isMesh) return;
-      (Array.isArray(o.material) ? o.material : [o.material]).forEach(m => {
-        const r = roleOf(m.name);
-        if (r && !gm[r].includes(m)) gm[r].push(m);
-      });
-    });
-    player.userData.glbMats = gm;
-    applyFish(save.selectedFish);
-  }
+  if (fish) applyFishGLB(fish);
   if (house) {
     houseGroup.clear();
     fitTo(house.scene, 2.2);
@@ -806,6 +822,19 @@ const tryGLB = url => new Promise(res => gltfLoader.load(url, g => res(g), undef
     }
   }
 })();
+
+$('customFishBtn').addEventListener('click', () => { sfx.click(); $('customFishInput').click(); });
+$('customFishInput').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = async () => {
+    const g = await parseGLB(reader.result);
+    if (g) { applyFishGLB(g); sfx.gem(); } else sfx.hit();
+  };
+  reader.readAsArrayBuffer(file);
+  e.target.value = '';
+});
 
 function radialTex(inner, outer) {
   const c = document.createElement('canvas'); c.width = c.height = 64;

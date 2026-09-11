@@ -27,5 +27,5 @@ A reskin of a simple HTML lane-runner into a "Fish of Fortune"-style casual game
 - `README.txt` — full workflow/time log, `Prompts.md` — summarized coding-agent prompts
 
 ## Notes
-- Over `http(s)` the game loads `glb/fish/fish.glb` as the player model; over `file://` a procedural fallback fish is used (CORS).
+- Over `http(s)` the game loads `glb/fish/fish.glb` as the player model; over `file://` it falls back to the same GLB embedded as base64 in `js/fish-glb-data.js` (loaded via a classic `<script>`, parsed with `GLTFLoader.parse`). If both fail, a procedural fish is used. The start screen also has a "Load custom fish .glb" button that parses a user-picked file via `FileReader`.
 - Everything except the two CDN libraries (Tailwind, Three.js) is local. Loaded payload ≈ 0.75 MB.
